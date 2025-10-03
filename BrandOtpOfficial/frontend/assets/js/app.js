@@ -1,10 +1,16 @@
+// API Base URL - Automatically detects production vs localhost
+const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? 'http://localhost:8000'
+    : 'https://brandotpofficial.onrender.com';
+
+console.log('🌐 API Base URL:', API_BASE_URL);
+
 /**
  * BrandOtp Frontend JavaScript
  */
 
 // API Base URL - Change this to match your backend URL
-const API_BASE_URL = 'http://localhost:8000';
-
+const API_BASE_URL = 'https://brandotpofficial.onrender.com';
 // Global error handler
 function handleApiError(error, customMessage = '') {
     const message = error.message || customMessage || 'An error occurred';
