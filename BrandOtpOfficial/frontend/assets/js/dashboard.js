@@ -1,3 +1,7 @@
+// API Configuration
+const API_BASE_URL = window.API_BASE_URL || 'https://brandotpofficial.onrender.com';
+console.log('📊 Dashboard API:', API_BASE_URL);
+
 // ===== DASHBOARD.JS - Fixed for Profile Loading =====
 document.addEventListener('DOMContentLoaded', function() {
     console.log('📊 Dashboard loaded');
@@ -25,12 +29,12 @@ async function loadUserProfile() {
     
     try {
         // Try the endpoint that's being called (based on terminal logs)
-        const response = await fetch('/api/auth/me', {
+        const response = await fetch(`${API_BASE_URL}/api/auth/me`, {
             method: 'GET',
             headers: {
-                'Content-Type': 'application/json'
-                // Note: We'll add Authorization header later when auth is fully implemented
-            }
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
+}
         });
         
         console.log('📥 Profile response status:', response.status);
@@ -144,9 +148,11 @@ function hideRetryButton() {
 // ✅ LOGOUT FUNCTION
 function logout() {
     localStorage.removeItem('access_token');
+    localStorage.removeItem('token');
     localStorage.removeItem('user');
-    window.location.href = '/login';
+    window.location.href = 'login.html';
 }
+
 
 // Make logout function globally available
 window.logout = logout;
