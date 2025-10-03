@@ -1,3 +1,8 @@
+// API Configuration
+const API_BASE_URL = window.API_BASE_URL || 'https://brandotpofficial.onrender.com';
+console.log('🔐 Login API:', API_BASE_URL);
+
+
 // ===== LOGIN.JS - Handle Login Form and Dashboard Redirect =====
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🔐 Login page loaded');
@@ -52,7 +57,7 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('📤 Sending login request to API...');
             
             // Send POST request to login API
-            const response = await fetch('/api/auth/login', {
+           const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
                 method: 'POST',
                 body: formData
             });
@@ -81,7 +86,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // ✅ Redirect to DASHBOARD after 1.5 seconds
                 setTimeout(() => {
-                    window.location.href = '/dashboard';
+                    window.location.href = 'dashboard.html';
                 }, 1500);
                 
             } else {
