@@ -51,7 +51,13 @@ app = FastAPI(
 # CORS Middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "https://brandotpofficial.shop",           # Production domain
+        "https://www.brandotpofficial.shop",       # WWW version
+        "https://*.netlify.app",                   # Netlify preview URLs
+        "http://localhost:8000",                   # Local development
+        "http://127.0.0.1:5500",                   # VS Code Live Server
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -911,3 +917,4 @@ async def get_current_user(request: Request):
         raise HTTPException(status_code=401, detail="Token expired")
     except jwt.JWTError:
         raise HTTPException(status_code=401, detail="Invalid token")
+
