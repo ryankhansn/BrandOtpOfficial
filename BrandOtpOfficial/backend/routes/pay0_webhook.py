@@ -1,6 +1,7 @@
 """
 FastAPI Pay0 Webhook Handler
 Handles payment success notifications from Pay0 gateway
+SYNC VERSION - Compatible with PyMongo
 """
 
 from fastapi import APIRouter, Request, Form
@@ -23,7 +24,7 @@ router = APIRouter()
 
 
 @router.post("/webhook")
-async def pay0_webhook(
+def pay0_webhook(  # REMOVED async
     request: Request,
     status: Optional[str] = Form(None),
     order_id: Optional[str] = Form(None),
@@ -34,7 +35,7 @@ async def pay0_webhook(
     user_token: Optional[str] = Form(None)
 ):
     """
-    Pay0 Webhook Endpoint
+    Pay0 Webhook Endpoint (SYNC)
     Receives payment status updates from Pay0 gateway
     
     Expected Form Data:
@@ -70,15 +71,16 @@ async def pay0_webhook(
             user_id = remark1
             
             if user_id and users_collection:
-                # Find user in database
-                user = await users_collection.find_one({"_id": user_id})
+                # Find user in database (REMOVED await)
+                user = users_collection.find_one({"_id": user_id})
                 
                 if user:
                     # Update user balance
                     current_balance = float(user.get("balance", 0))
                     new_balance = current_balance + payment_amount
                     
-                    await users_collection.update_one(
+                    # REMOVED await
+                    users_collection.update_one(
                         {"_id": user_id},
                         {"$set": {"balance": new_balance}}
                     )
@@ -99,7 +101,8 @@ async def pay0_webhook(
                     }
                     
                     if transactions_collection:
-                        await transactions_collection.insert_one(transaction)
+                        # REMOVED await
+                        transactions_collection.insert_one(transaction)
                         logger.info(f"✅ Transaction recorded: {order_id}")
                     
                     return {
@@ -154,7 +157,7 @@ async def pay0_webhook(
 
 
 @router.get("/webhook")
-async def webhook_test():
+def webhook_test():  # REMOVED async
     """
     Test endpoint - Pay0 sometimes sends GET request to verify webhook URL
     """
