@@ -290,6 +290,12 @@
     </div>
 
     <script>
+            // API Configuration - MUST BE FIRST
+    const API_BASE_URL = window.API_BASE_URL || 'https://brandotpofficial.onrender.com';
+    console.log('🔗 API Base URL:', API_BASE_URL);
+    
+    // Global data storage
+
         // Global data storage
         let countries = [];
         let allServices = []; // All services for current country
@@ -328,7 +334,8 @@
             loadingOverlay.style.display = 'flex';
             
             try {
-                const response = await fetch('/api/smsman/countries');
+                const response = await fetch(`${API_BASE_URL}/api/smsman/countries`);
+
                 const data = await response.json();
                 
                 if (data.success && data.countries) {
@@ -354,7 +361,8 @@
             serviceCount.textContent = '';
             
             try {
-                const response = await fetch(`/api/smsman/services/${countryId}`);
+               const response = await fetch(`${API_BASE_URL}/api/smsman/services/${countryId}`);
+
                 const data = await response.json();
                 
                 if (data.success && data.services && data.services.length > 0) {
@@ -506,7 +514,8 @@
             smsSection.style.display = 'none';
             
             try {
-                const response = await fetch('/api/smsman/buy', {
+               const response = await fetch(`${API_BASE_URL}/api/smsman/buy`, {
+
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -581,7 +590,7 @@
             if (!currentPurchase) return;
             
             try {
-                const response = await fetch(`/api/smsman/get-sms`, {
+                const response = await fetch(`${API_BASE_URL}/api/smsman/get-sms`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
