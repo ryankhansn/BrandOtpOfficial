@@ -1,4 +1,8 @@
 console.log('🚀 Buy Number Script Loading...');
+// API Configuration
+const API_BASE_URL = window.API_BASE_URL || 'https://brandotpofficial.onrender.com';
+console.log('🔗 Using API:', API_BASE_URL);
+
 
 let isLoading = false;
 
@@ -28,7 +32,7 @@ async function loadCountries() {
     console.log('🌍 Loading countries...');
     
     try {
-        const response = await fetch('/api/smsman/countries');
+        const response = await fetch(`${API_BASE_URL}/api/smsman/countries`);
         console.log('📡 Countries response status:', response.status);
         
         if (!response.ok) {
@@ -86,7 +90,7 @@ async function loadServices() {
     console.log('🛠️ Loading services...');
     
     try {
-        const response = await fetch('/api/smsman/services');
+        const response = await fetch(`${API_BASE_URL}/api/smsman/services`);
         console.log('📡 Services response status:', response.status);
         
         if (!response.ok) {
@@ -201,7 +205,7 @@ async function buyNumber() {
         setButtonLoading(true);
         console.log(`🛒 Buying number: Country=${countryId}, Service=${applicationId}`);
         
-        const response = await fetch('/api/smsman/buy', {
+     const response = await fetch(`${API_BASE_URL}/api/smsman/buy`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -254,3 +258,4 @@ function showResult(message, type) {
 }
 
 console.log('✅ Buy Number Script Loaded');
+
