@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://127.0.0.1:8000';
+const API_BASE_URL = 'https://brandotpofficial.onrender.com';
 
 async function apiRequest(endpoint, method = 'GET', data = null, token = null) {
     const url = `${API_BASE_URL}${endpoint}`;
