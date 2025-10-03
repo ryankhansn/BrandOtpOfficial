@@ -481,19 +481,19 @@
         <div id="actionsSection" class="actions-section">
             <h3 class="section-title">🎯 Quick Actions</h3>
             <div class="actions-grid">
-                <a href="/add-money" class="action-btn primary">
+               <a href="add_money.html" class="action-btn primary">
                     <div class="action-icon">💳</div>
                     <div>Add Balance</div>
                 </a>
-                <a href="/buy-number" class="action-btn secondary">
+               <a href="buy_number.html" class="action-btn secondary">
                     <div class="action-icon">📱</div>
                     <div>Buy Number</div>
                 </a>
-                <a href="/wallet" class="action-btn secondary">
+               <a href="wallet.html" class="action-btn secondary">
                     <div class="action-icon">👛</div>
                     <div>Wallet</div>
                 </a>
-                <a href="/history" class="action-btn primary">
+              <a href="history.html" class="action-btn primary">
                     <div class="action-icon">📊</div>
                     <div>History</div>
                 </a>
@@ -531,7 +531,7 @@
             
             if (!accessToken || !storedUser) {
                 console.log('❌ No authentication found, redirecting to login');
-                window.location.href = '/login';
+              window.location.href = 'login.html';
                 return;
             }
             
@@ -614,7 +614,7 @@
             localStorage.removeItem('user');
             
             // Redirect to login
-            window.location.href = '/login';
+           window.location.href = 'login.html';
         }
 
         // ✅ REFRESH USER DATA (if needed)
