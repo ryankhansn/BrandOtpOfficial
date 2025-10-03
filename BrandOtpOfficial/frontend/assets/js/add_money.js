@@ -1,4 +1,10 @@
 /* ---------- Add Money (Pay0 only) ---------- */
+/* API Configuration */
+const API_BASE_URL = window.API_BASE_URL || 'https://brandotpofficial.onrender.com';
+console.log('💰 Add Money - Using API:', API_BASE_URL);
+
+/* ---------- Add Money (Pay0 only) ---------- */
+
 const form   = document.getElementById("addMoneyForm");
 const amount = document.getElementById("amount");
 const mobile = document.getElementById("mobile_number");
@@ -32,7 +38,7 @@ form.addEventListener("submit", async e=>{
     if(!/^\d{10}$/.test(mobile.value)) throw new Error("Enter valid 10-digit mobile");
 
     /* hit FastAPI */
-    const res = await fetch("/api/payments/pay0/order",{
+    const res = await fetch(`${API_BASE_URL}/api/payments/pay0/order`,{
       method:"POST",
       headers:{ "Content-Type":"application/json" },
       body: JSON.stringify({ mobile:mobile.value, amount:amt })
