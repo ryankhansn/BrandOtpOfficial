@@ -1,3 +1,7 @@
+// API Configuration - MUST BE AT TOP
+const API_BASE_URL = window.API_BASE_URL || 'https://brandotpofficial.onrender.com';
+console.log('🔐 Auth - Using API:', API_BASE_URL);
+
 // auth.js
 document.addEventListener("DOMContentLoaded", () => {
   const loginForm = document.getElementById("login-form");
@@ -25,7 +29,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const password = document.getElementById("login-password").value.trim();
 
       try {
-        const res = await fetch(`${API_BASE_URL}/auth/login`, {
+        const res = await fetch(`${API_BASE_URL}/api/auth/login`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email, password })
@@ -36,7 +40,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (res.ok) {
           localStorage.setItem("token", data.access_token);
           alert("✅ Login successful!");
-          window.location.href = "/frontend/dashboard.html";
+          window.location.href = "dashboard.html"; // Relative path
         } else {
           loginError.textContent = data.detail || "❌ Login failed";
         }
@@ -63,7 +67,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       try {
-        const res = await fetch(`${API_BASE_URL}/auth/register`, {
+        const res = await fetch(`${API_BASE_URL}/api/auth/register`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ username, email, password })
@@ -73,7 +77,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (res.ok) {
           alert("✅ Signup successful! Please login.");
-          window.location.href = "/frontend/auth.html";
+          window.location.href = "auth.html"; // Relative path
         } else {
           signupError.textContent = data.detail || "❌ Signup failed";
         }
