@@ -106,7 +106,7 @@ def init_database():
 
 
 # Helper function to get current user (simplified version)
-async def get_current_user(request: Request):
+def get_current_user(request: Request):
     """Get current user from session/token - replace with your auth logic"""
     # This is a simplified version - replace with your actual authentication
     # For demo purposes, returning user_id = 1
@@ -156,7 +156,7 @@ async def get_number_history(request: Request):
     """Get user's number purchase history"""
     try:
         # Get current user
-        current_user = await get_current_user(request)
+       current_user = get_current_user(request)
         user_id = current_user["user_id"]
         
         # Query database
@@ -215,7 +215,7 @@ async def buy_number_api(
     """Buy a number and save to database"""
     try:
         # Get current user
-        current_user = await get_current_user(request)
+       current_user = get_current_user(request)
         user_id = current_user["user_id"]
         
         # Generate unique order ID
@@ -588,7 +588,7 @@ async def get_wallet_balance(request: Request):
 async def get_wallet_transactions(request: Request):
     """Get user wallet transactions - SQLite version"""
     try:
-        current_user = await get_current_user(request)
+      current_user = get_current_user(request)
         user_id = current_user["user_id"]
         
         # Create wallet_transactions table if not exists
@@ -653,7 +653,7 @@ async def add_money_to_wallet(
 ):
     """Add money to wallet - SQLite version"""
     try:
-        current_user = await get_current_user(request)
+       current_user = get_current_user(request)
         user_id = current_user["user_id"]
         
         # Validate amount
@@ -717,7 +717,7 @@ async def add_money_to_wallet(
 async def get_current_user_info(request: Request):
     """Get current user info"""
     try:
-        current_user = await get_current_user(request)
+      current_user = get_current_user(request)
         return {
             "success": True,
             "user": {
@@ -917,5 +917,6 @@ async def get_current_user(request: Request):
         raise HTTPException(status_code=401, detail="Token expired")
     except jwt.JWTError:
         raise HTTPException(status_code=401, detail="Invalid token")
+
 
 
