@@ -116,12 +116,16 @@
         </form>
 
         <div class="login-link">
-            Already have an account? <a href="/login">Login here</a>
+           Already have an account? <a href="login.html">Login here</a>
         </div>
     </div>
 
-    <script>
-        document.getElementById('signupForm').addEventListener('submit', async function(e) {
+   <script>
+    // API Configuration
+    const API_BASE_URL = window.API_BASE_URL || 'https://brandotpofficial.onrender.com';
+    console.log('📝 Signup API:', API_BASE_URL);
+    
+    document.getElementById('signupForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
             const username = document.getElementById('username').value.trim();
@@ -144,7 +148,7 @@
             clearMessage();
             
             try {
-                const response = await fetch('/api/auth/signup', {
+               const response = await fetch(`${API_BASE_URL}/api/auth/signup`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -164,7 +168,7 @@
                     document.getElementById('signupForm').reset();
                     
                     setTimeout(() => {
-                        window.location.href = '/login';
+                        window.location.href = 'login.html';
                     }, 2000);
                     
                 } else {
