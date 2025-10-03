@@ -1,10 +1,11 @@
 """
 MongoDB Database Configuration
 Handles connection to MongoDB Atlas and collection definitions
+SYNC VERSION - Compatible with Render Free Tier (No Motor/Rust)
 """
 
 import os
-from motor.motor_asyncio import AsyncIOMotorClient
+from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure
 import logging
 
@@ -23,18 +24,20 @@ MONGODB_URI = os.getenv(
 # Database name
 DATABASE_NAME = os.getenv("DATABASE_NAME", "brandotp")
 
-# ===== CREATE MONGODB CLIENT =====
+# ===== CREATE MONGODB CLIENT (SYNC) =====
 try:
-    # Create async MongoDB client
-    client = AsyncIOMotorClient(MONGODB_URI)
+    # Create sync MongoDB client (NOT async)
+    client = MongoClient(MONGODB_URI)
     
     # Get database
     db = client[DATABASE_NAME]
     
     # Test connection
     client.admin.command('ping')
-    logger.info("✅ MongoDB connected successfully")
+    logger.info("=" * 60)
+    logger.info("✅ MongoDB connected successfully (SYNC)")
     logger.info(f"✅ Using database: {DATABASE_NAME}")
+    logger.info("=" * 60)
     
     # ===== DEFINE COLLECTIONS =====
     users_collection = db.users
@@ -49,6 +52,7 @@ except ConnectionFailure as e:
     logger.warning("⚠️ Running without database - data will not be saved!")
     
     # Set collections to None if connection fails
+    client = None
     db = None
     users_collection = None
     transactions_collection = None
@@ -57,6 +61,7 @@ except ConnectionFailure as e:
     
 except Exception as e:
     logger.error(f"❌ Unexpected database error: {e}")
+    client = None
     db = None
     users_collection = None
     transactions_collection = None
@@ -64,55 +69,58 @@ except Exception as e:
     orders_collection = None
 
 
-# ===== HELPER FUNCTIONS =====
+# ===== HELPER FUNCTIONS (SYNC - NO ASYNC/AWAIT) =====
 
-async def check_connection():
+def check_connection():
     """Check if database connection is alive"""
     try:
-        await client.admin.command('ping')
-        return True
+        if client:
+            client.admin.command('ping')
+            return True
+        return False
     except:
         return False
 
 
-async def get_user_by_id(user_id: str):
+def get_user_by_id(user_id: str):
     """Get user by ID"""
     if users_collection is None:
         return None
-    return await users_collection.find_one({"_id": user_id})
+    return users_collection.find_one({"_id": user_id})
 
 
-async def get_user_by_email(email: str):
+def get_user_by_email(email: str):
     """Get user by email"""
     if users_collection is None:
         return None
-    return await users_collection.find_one({"email": email})
+    return users_collection.find_one({"email": email})
 
 
-async def update_user_balance(user_id: str, new_balance: float):
+def update_user_balance(user_id: str, new_balance: float):
     """Update user balance"""
     if users_collection is None:
         return False
     
-    result = await users_collection.update_one(
+    result = users_collection.update_one(
         {"_id": user_id},
         {"$set": {"balance": new_balance}}
     )
     return result.modified_count > 0
 
 
-async def create_transaction(transaction_data: dict):
+def create_transaction(transaction_data: dict):
     """Create new transaction record"""
     if transactions_collection is None:
         return None
     
-    result = await transactions_collection.insert_one(transaction_data)
+    result = transactions_collection.insert_one(transaction_data)
     return result.inserted_id
 
 
 # ===== EXPORT =====
 __all__ = [
     'db',
+    'client',
     'users_collection',
     'transactions_collection',
     'numbers_collection',
