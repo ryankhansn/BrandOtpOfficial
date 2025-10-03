@@ -19,13 +19,21 @@ from typing import Optional
 from backend.routes import register_all_routers
 from backend.routes.smsman_numbers import router as smsman_router
 # Add these imports after existing imports
-from passlib.context import CryptContext
 import secrets
 import jwt
 from datetime import datetime, timedelta
 
-# Add password hashing context
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+# NEW - Simple hash (temporary for testing)
+import hashlib
+
+def get_password_hash(password: str) -> str:
+    """Simple hash for testing (replace with proper hashing in production)"""
+    return hashlib.sha256(password.encode()).hexdigest()
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    """Verify password"""
+    return hashlib.sha256(plain_password.encode()).hexdigest() == hashed_password
 
 # JWT settings
 SECRET_KEY = "your-secret-key-change-in-production"
@@ -917,5 +925,6 @@ async def get_current_user(request: Request):
         raise HTTPException(status_code=401, detail="Token expired")
     except jwt.JWTError:
         raise HTTPException(status_code=401, detail="Invalid token")
+
 
 
