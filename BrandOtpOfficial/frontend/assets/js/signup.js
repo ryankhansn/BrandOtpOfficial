@@ -48,7 +48,7 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('📤 Sending signup request...');
             
             // Submit to API
-            const response = await fetch('/api/auth/register', {
+           const response = await fetch(`${API_BASE_URL}/api/auth/register`, {
                 method: 'POST',
                 body: formData
             });
@@ -66,7 +66,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // ✅ Redirect to LOGIN page after 2 seconds
                 setTimeout(() => {
-                    window.location.href = '/login';
+                   window.location.href = 'login.html';
                 }, 2000);
                 
             } else {
