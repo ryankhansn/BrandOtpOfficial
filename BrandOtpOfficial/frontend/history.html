@@ -164,7 +164,7 @@
         <div class="header">
             <h1>📱 Number Purchase History</h1>
             <div>
-                <a href="/dashboard" class="back-btn">← Back to Dashboard</a>
+                <a href="dashboard.html" class="back-btn">← Back to Dashboard</a>
                 <button onclick="loadData()" class="refresh-btn">🔄 Refresh</button>
             </div>
         </div>
@@ -192,7 +192,7 @@
             
             <div id="emptyState" class="empty-state" style="display: none;">
                 <h3>No purchase history found</h3>
-                <p>You haven't purchased any numbers yet. <a href="/buy-number">Buy your first number</a></p>
+               <p>You haven't purchased any numbers yet. <a href="buy_number.html">Buy your first number</a></p>
             </div>
             
             <div id="errorState" class="empty-state" style="display: none;">
@@ -203,14 +203,19 @@
     </div>
 
     <script>
-        async function loadData() {
+    // API Configuration
+    const API_BASE_URL = window.API_BASE_URL || 'https://brandotpofficial.onrender.com';
+    console.log('📊 History API:', API_BASE_URL);
+    
+    async function loadData() {
+
             document.getElementById('loading').style.display = 'block';
             document.getElementById('historyTable').style.display = 'none';
             document.getElementById('emptyState').style.display = 'none';
             document.getElementById('errorState').style.display = 'none';
             
             try {
-                const response = await fetch('/api/history/numbers');
+              const response = await fetch(`${API_BASE_URL}/api/history/numbers`);
                 const data = await response.json();
                 
                 if (!data.success) {
