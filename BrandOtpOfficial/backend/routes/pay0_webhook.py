@@ -1,18 +1,26 @@
 """
 FastAPI Pay0 Webhook Handler
-Converted from Flask to FastAPI
-Handles payment success notifications from Pay0
+Handles payment success notifications from Pay0 gateway
 """
 
-from fastapi import APIRouter, Request, HTTPException, Form
+from fastapi import APIRouter, Request, Form
 from typing import Optional
 import json
 from datetime import datetime
+import logging
 
-# Database imports (adjust based on your setup)
+# ===== FIX: Add parent directory to Python path =====
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+# Now database import will work
 from database import users_collection, transactions_collection
 
+# Setup logger
+logger = logging.getLogger(__name__)
 router = APIRouter()
+
 
 @router.post("/webhook")
 async def pay0_webhook(
@@ -32,36 +40,36 @@ async def pay0_webhook(
     Expected Form Data:
     - status: SUCCESS/FAILED
     - order_id: Order ID
-    - remark1: Custom data 1
-    - remark2: Custom data 2
+    - remark1: User ID (stored during order creation)
+    - remark2: Custom data
     - amount: Payment amount
-    - customer_mobile: Customer phone
+    - customer_mobile: Customer phone number
     """
     
     try:
         # Log incoming webhook
-        print("=" * 60)
-        print("🔔 PAY0 WEBHOOK RECEIVED")
-        print("=" * 60)
-        print(f"Status: {status}")
-        print(f"Order ID: {order_id}")
-        print(f"Amount: {amount}")
-        print(f"Mobile: {customer_mobile}")
-        print(f"Remark1: {remark1}")
-        print(f"Remark2: {remark2}")
-        print("=" * 60)
+        logger.info("=" * 60)
+        logger.info("🔔 PAY0 WEBHOOK RECEIVED")
+        logger.info("=" * 60)
+        logger.info(f"📊 Status: {status}")
+        logger.info(f"📊 Order ID: {order_id}")
+        logger.info(f"📊 Amount: {amount}")
+        logger.info(f"📊 Mobile: {customer_mobile}")
+        logger.info(f"📊 Remark1 (User ID): {remark1}")
+        logger.info(f"📊 Remark2: {remark2}")
+        logger.info("=" * 60)
         
         # Check if payment successful
-        if status == "SUCCESS":
-            print(f"✅ Payment SUCCESS for order {order_id}")
+        if status and status.upper() == "SUCCESS":
+            logger.info(f"✅ Payment SUCCESS for order {order_id}")
             
             # Convert amount to float
             payment_amount = float(amount) if amount else 0.0
             
-            # Find user by mobile number or remark1 (user_id stored there)
-            user_id = remark1  # Assuming you stored user_id in remark1
+            # Get user ID from remark1 (stored during order creation)
+            user_id = remark1
             
-            if user_id:
+            if user_id and users_collection:
                 # Find user in database
                 user = await users_collection.find_one({"_id": user_id})
                 
@@ -75,7 +83,7 @@ async def pay0_webhook(
                         {"$set": {"balance": new_balance}}
                     )
                     
-                    print(f"✅ Balance updated: {current_balance} → {new_balance}")
+                    logger.info(f"✅ Balance updated: ₹{current_balance} → ₹{new_balance}")
                     
                     # Create transaction record
                     transaction = {
@@ -84,44 +92,77 @@ async def pay0_webhook(
                         "amount": payment_amount,
                         "reason": f"Add Money - Pay0 (Order: {order_id})",
                         "order_id": order_id,
+                        "transaction_id": order_id,
                         "status": "completed",
                         "payment_method": "Pay0",
                         "created_at": datetime.utcnow()
                     }
                     
-                    await transactions_collection.insert_one(transaction)
-                    print(f"✅ Transaction recorded: {order_id}")
+                    if transactions_collection:
+                        await transactions_collection.insert_one(transaction)
+                        logger.info(f"✅ Transaction recorded: {order_id}")
                     
-                    return {"message": "Webhook received successfully", "status": "success"}
+                    return {
+                        "success": True,
+                        "message": "Webhook received successfully",
+                        "order_id": order_id,
+                        "amount": payment_amount,
+                        "new_balance": new_balance
+                    }
                 else:
-                    print(f"⚠️ User not found: {user_id}")
-                    return {"message": "User not found", "status": "error"}
+                    logger.warning(f"⚠️ User not found: {user_id}")
+                    return {
+                        "success": False,
+                        "message": "User not found",
+                        "order_id": order_id
+                    }
             else:
-                print(f"⚠️ No user ID in webhook data")
-                return {"message": "User ID missing", "status": "error"}
+                logger.warning(f"⚠️ No user ID in webhook data or database unavailable")
+                return {
+                    "success": False,
+                    "message": "User ID missing or database unavailable",
+                    "order_id": order_id
+                }
+        
+        elif status and status.upper() in ["FAILED", "CANCELLED"]:
+            logger.error(f"❌ Payment FAILED/CANCELLED: {status}")
+            return {
+                "success": False,
+                "message": f"Payment {status}",
+                "order_id": order_id
+            }
         
         else:
-            # Payment failed or pending
-            print(f"❌ Payment status: {status}")
-            return {"error": f"Invalid status: {status}"}, 400
+            logger.warning(f"⏳ Unknown payment status: {status}")
+            return {
+                "success": False,
+                "message": f"Invalid status: {status}",
+                "order_id": order_id
+            }
     
     except Exception as e:
-        print(f"❌ WEBHOOK ERROR: {str(e)}")
+        logger.error(f"❌ WEBHOOK ERROR: {str(e)}")
         import traceback
-        traceback.print_exc()
+        logger.error(traceback.format_exc())
         
         # Return 200 OK to prevent Pay0 from retrying
-        return {"message": "Webhook received with error", "error": str(e)}
+        return {
+            "success": False,
+            "message": "Webhook received with error",
+            "error": str(e)
+        }
 
 
-# Optional: GET endpoint for testing
 @router.get("/webhook")
 async def webhook_test():
     """
     Test endpoint - Pay0 sometimes sends GET request to verify webhook URL
     """
+    logger.info("🔍 Webhook test endpoint accessed")
     return {
+        "success": True,
         "message": "Webhook endpoint is active",
         "status": "ready",
-        "method": "POST required for actual webhooks"
+        "method": "POST required for actual webhooks",
+        "endpoint": "/api/payments/pay0/webhook"
     }
