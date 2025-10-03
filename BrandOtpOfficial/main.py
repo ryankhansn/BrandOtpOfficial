@@ -557,7 +557,7 @@ async def get_wallet_balance(request: Request):
     """Get user wallet balance - SQLite version"""
     try:
         # Get user from session/token (simplified)
-        current_user = await get_current_user(request)
+       current_user = get_current_user(request)
         user_id = current_user["user_id"]
         
         # Get balance from SQLite database
@@ -917,6 +917,5 @@ async def get_current_user(request: Request):
         raise HTTPException(status_code=401, detail="Token expired")
     except jwt.JWTError:
         raise HTTPException(status_code=401, detail="Invalid token")
-
 
 
