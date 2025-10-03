@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 MONGODB_URI = os.getenv(
     "MONGODB_URI",
     # Default connection string (REPLACE WITH YOUR ACTUAL URI)
-    "mongodb+srv://username:password@cluster.mongodb.net/brandotp?retryWrites=true&w=majority"
+    "mongodb+srv://ryankhann703_db_user:Bs6DNplkZwqY5ppN@brandotpofficial.mbrslgk.mongodb.net/brandotp?retryWrites=true&w=majority&appName=BrandOtpOfficial&tls=true&tlsAllowInvalidCertificates=true"
 )
 
 # Database name
