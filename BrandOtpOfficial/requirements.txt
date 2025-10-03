@@ -1,13 +1,25 @@
+# ================================================
+# BrandOtp Backend - Working Minimal Dependencies
+# ================================================
+
+# Core Framework
 fastapi==0.104.1
-uvicorn[standard]==0.24.0
+uvicorn==0.24.0
+
+# Data Validation
 pydantic==2.4.2
+
+# Environment
 python-dotenv==1.0.0
+
+# Database
 motor==3.1.1
 pymongo==4.3.3
 dnspython==2.4.2
+
+# HTTP Client
 requests==2.31.0
-httpx==0.25.0
-PyJWT==2.8.0
-passlib[bcrypt]==1.7.4
+
+# File Upload
 python-multipart==0.0.6
-Jinja2==3.1.2
+
