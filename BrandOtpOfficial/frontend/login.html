@@ -214,12 +214,18 @@
         </form>
         
         <div class="form-links">
-            <a href="/signup">Don't have an account? Sign up</a>
+           <a href="signup.html">Don't have an account? Sign up</a>
         </div>
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
+       <script>
+    // API Configuration
+    const API_BASE_URL = window.API_BASE_URL || 'https://brandotpofficial.onrender.com';
+    console.log('🔐 Login API:', API_BASE_URL);
+    
+    document.addEventListener('DOMContentLoaded', function() {
+
             console.log('🔐 Login page loaded');
             
             // Get form elements
@@ -273,7 +279,7 @@
                     console.log('📤 Sending login request to API...');
                     
                     // Send JSON data with correct headers
-                    const response = await fetch('/api/auth/login', {
+                   const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json'
@@ -310,7 +316,7 @@
                         
                         // ✅ Redirect to DASHBOARD after 1.5 seconds
                         setTimeout(() => {
-                            window.location.href = '/dashboard';
+                          window.location.href = 'dashboard.html';
                         }, 1500);
                         
                     } else {
