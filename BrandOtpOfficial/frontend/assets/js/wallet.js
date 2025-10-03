@@ -1,3 +1,7 @@
+// API Configuration
+const API_BASE_URL = window.API_BASE_URL || 'https://brandotpofficial.onrender.com';
+console.log('💰 Wallet API:', API_BASE_URL);
+
 // ===== WALLET.JS - Real API Integration =====
 console.log('💰 Wallet JS loaded');
 
@@ -36,12 +40,12 @@ async function checkAuthentication() {
         const accessToken = localStorage.getItem('access_token');
         if (!accessToken) {
             console.log('❌ No access token found, redirecting to login');
-            window.location.href = '/login';
+           window.location.href = 'login.html';
             return false;
         }
         
         // Verify token with backend
-        const response = await fetch('/api/auth/me', {
+        const response = await fetch(`${API_BASE_URL}/api/auth/me`, {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${accessToken}`,
@@ -60,7 +64,7 @@ async function checkAuthentication() {
         
         // Token invalid, redirect to login
         localStorage.removeItem('access_token');
-        window.location.href = '/login';
+       window.location.href = 'login.html';
         return false;
         
     } catch (error) {
@@ -84,10 +88,10 @@ async function loadWalletData() {
         
         // Fetch balance and transactions from real API
         const [balanceResponse, transactionsResponse] = await Promise.all([
-            fetch('/api/wallet/balance', {
+          fetch(`${API_BASE_URL}/api/wallet/balance`, {
                 headers: { 'Authorization': `Bearer ${accessToken}` }
             }),
-            fetch('/api/wallet/transactions', {
+           fetch(`${API_BASE_URL}/api/wallet/transactions`, {
                 headers: { 'Authorization': `Bearer ${accessToken}` }
             })
         ]);
@@ -252,7 +256,8 @@ function refreshWallet() {
 
 // ✅ GO TO ADD MONEY
 function goToAddMoney() {
-    window.location.href = '/add-money';
+    window.location.href = 'add_money.html';
 }
 
 console.log('✅ Real Wallet JavaScript loaded successfully');
+
