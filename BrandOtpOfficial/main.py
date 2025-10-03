@@ -12,21 +12,17 @@ import sqlite3
 import time
 from contextlib import suppress
 from typing import Optional
-
-
-# Import custom routers
-
-from backend.routes import register_all_routers
-from backend.routes.smsman_numbers import router as smsman_router
-# Add these imports after existing imports
-import secrets
-import jwt
 from datetime import datetime, timedelta
 
+# Import custom routers
+from backend.routes import register_all_routers
+from backend.routes.smsman_numbers import router as smsman_router
 
-# NEW - Simple hash (temporary for testing)
+# ✅ CLEAN IMPORTS - No JWT, No passlib
 import hashlib
+import secrets
 
+# ✅ Password functions using hashlib (NO passlib)
 def get_password_hash(password: str) -> str:
     """Simple hash for testing (replace with proper hashing in production)"""
     return hashlib.sha256(password.encode()).hexdigest()
@@ -35,9 +31,13 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verify password"""
     return hashlib.sha256(plain_password.encode()).hexdigest() == hashed_password
 
-# JWT settings
+# ✅ Simple token function (NO JWT)
+def create_access_token(data: dict, expires_delta=None):
+    """Create simple token (no JWT for now)"""
+    return secrets.token_urlsafe(32)
+
+# Settings
 SECRET_KEY = "your-secret-key-change-in-production"
-ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 # PAY0 Configuration
@@ -55,16 +55,15 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
-
 # CORS Middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "https://brandotpofficial.shop",           # Production domain
-        "https://www.brandotpofficial.shop",       # WWW version
-        "https://brandotpofficial.netlify.app",                   # Netlify preview URLs
-        "http://localhost:8000",                   # Local development
-        "http://127.0.0.1:5500",                   # VS Code Live Server
+        "https://brandotpofficial.shop",
+        "https://www.brandotpofficial.shop",
+        "https://brandotpofficial.netlify.app",
+        "http://localhost:8000",
+        "http://127.0.0.1:5500",
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -72,14 +71,12 @@ app.add_middleware(
     expose_headers=["*"]
 )
 
-
 # Database initialization
 def init_database():
     """Initialize database with required tables"""
     conn = sqlite3.connect('database.db')
     cursor = conn.cursor()
     
-    # Create number_orders table
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS number_orders (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -96,7 +93,6 @@ def init_database():
     )
     ''')
     
-    # Create users table if not exists
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -108,18 +104,32 @@ def init_database():
     )
     ''')
     
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS wallet_transactions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        transaction_id TEXT UNIQUE,
+        type TEXT NOT NULL,
+        amount REAL NOT NULL,
+        reason TEXT,
+        status TEXT DEFAULT 'completed',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+    ''')
+    
     conn.commit()
     conn.close()
     print("✅ Database tables initialized")
 
-
-# Helper function to get current user (simplified version)
+# ✅ Helper function (NO async, simplified)
 def get_current_user(request: Request):
-    """Get current user from session/token - replace with your auth logic"""
-    # This is a simplified version - replace with your actual authentication
-    # For demo purposes, returning user_id = 1
-    return {"user_id": 1, "username": "demo_user"}
-
+    """Get current user from session/token - simplified for testing"""
+    try:
+        # Simplified - just return demo user for now
+        # TODO: Implement proper token validation later
+        return {"user_id": 1, "username": "demo_user", "email": "demo@example.com"}
+    except Exception as e:
+        raise HTTPException(status_code=401, detail="Authentication required")
 
 # Exception Handlers
 @app.exception_handler(RequestValidationError)
@@ -133,7 +143,6 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         }
     )
 
-
 @app.exception_handler(StarletteHTTPException)
 async def http_exception_handler(request: Request, exc: StarletteHTTPException):
     return JSONResponse(
@@ -144,7 +153,6 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException):
             "status_code": exc.status_code
         }
     )
-
 
 @app.exception_handler(Exception)
 async def general_exception_handler(request: Request, exc: Exception):
@@ -157,17 +165,130 @@ async def general_exception_handler(request: Request, exc: Exception):
         }
     )
 
+# ✅ AUTHENTICATION ROUTES
+@app.post("/api/auth/login")
+async def login_api(
+    request: Request,
+    email: str = Form(...),
+    password: str = Form(...)
+):
+    """User login API"""
+    try:
+        print(f"🔐 Login attempt for email: {email}")
+        
+        conn = sqlite3.connect('database.db')
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        
+        cursor.execute("SELECT id, username, email, password FROM users WHERE email = ?", (email,))
+        user = cursor.fetchone()
+        conn.close()
+        
+        if not user:
+            print("❌ User not found")
+            return JSONResponse(
+                status_code=401,
+                content={"success": False, "detail": "Invalid email or password"}
+            )
+        
+        if not verify_password(password, user['password']):
+            print("❌ Invalid password")
+            return JSONResponse(
+                status_code=401,
+                content={"success": False, "detail": "Invalid email or password"}
+            )
+        
+        access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        access_token = create_access_token(
+            data={"sub": user['email'], "user_id": user['id']},
+            expires_delta=access_token_expires
+        )
+        
+        print(f"✅ Login successful for user: {user['username']}")
+        
+        return {
+            "success": True,
+            "message": "Login successful",
+            "access_token": access_token,
+            "token_type": "bearer",
+            "user": {
+                "id": user['id'],
+                "username": user['username'],
+                "email": user['email']
+            }
+        }
+        
+    except Exception as e:
+        print(f"❌ Login error: {e}")
+        return JSONResponse(
+            status_code=500,
+            content={"success": False, "detail": "Internal server error"}
+        )
 
-# ✅ HISTORY API ROUTES - NEW ADDITIONS
+@app.post("/api/auth/signup")
+async def signup_api(
+    request: Request,
+    username: str = Form(...),
+    email: str = Form(...),
+    password: str = Form(...)
+):
+    """User signup API"""
+    try:
+        print(f"📝 Signup attempt for email: {email}")
+        
+        if len(password) < 6:
+            return JSONResponse(
+                status_code=400,
+                content={"success": False, "detail": "Password must be at least 6 characters long"}
+            )
+        
+        conn = sqlite3.connect('database.db')
+        cursor = conn.cursor()
+        
+        cursor.execute("SELECT id FROM users WHERE email = ?", (email,))
+        existing_user = cursor.fetchone()
+        
+        if existing_user:
+            conn.close()
+            return JSONResponse(
+                status_code=400,
+                content={"success": False, "detail": "Email already registered"}
+            )
+        
+        hashed_password = get_password_hash(password)
+        
+        cursor.execute("""
+            INSERT INTO users (username, email, password, balance)
+            VALUES (?, ?, ?, 0.0)
+        """, (username, email, hashed_password))
+        
+        user_id = cursor.lastrowid
+        conn.commit()
+        conn.close()
+        
+        print(f"✅ User created successfully: {username}")
+        
+        return {
+            "success": True,
+            "message": "Account created successfully",
+            "user_id": user_id
+        }
+        
+    except Exception as e:
+        print(f"❌ Signup error: {e}")
+        return JSONResponse(
+            status_code=500,
+            content={"success": False, "detail": "Internal server error"}
+        )
+
+# ✅ HISTORY API ROUTES
 @app.get("/api/history/numbers")
 async def get_number_history(request: Request):
     """Get user's number purchase history"""
     try:
-        # Get current user
-       current_user = get_current_user(request)
+        current_user = get_current_user(request)
         user_id = current_user["user_id"]
         
-        # Query database
         conn = sqlite3.connect('database.db')
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
@@ -184,7 +305,6 @@ async def get_number_history(request: Request):
         rows = cursor.fetchall()
         conn.close()
         
-        # Format the data
         formatted_history = []
         for row in rows:
             formatted_history.append({
@@ -198,21 +318,14 @@ async def get_number_history(request: Request):
                 'dateTime': row['created_at']
             })
         
-        return {
-            "success": True,
-            "history": formatted_history
-        }
+        return {"success": True, "history": formatted_history}
         
     except Exception as e:
         print(f"Error fetching history: {e}")
         return JSONResponse(
             status_code=500,
-            content={
-                "success": False,
-                "error": "Failed to fetch history"
-            }
+            content={"success": False, "error": "Failed to fetch history"}
         )
-
 
 @app.post("/api/buy-number")
 async def buy_number_api(
@@ -222,19 +335,13 @@ async def buy_number_api(
 ):
     """Buy a number and save to database"""
     try:
-        # Get current user
-       current_user = get_current_user(request)
+        current_user = get_current_user(request)
         user_id = current_user["user_id"]
         
-        # Generate unique order ID
         order_id = f"ORD{int(time.time())}"
+        phone_number = "+91 98765 43210"
+        amount = 25.00
         
-        # TODO: Replace with your actual SMS API call
-        # Example API call to get number
-        phone_number = "+91 98765 43210"  # Replace with actual API response
-        amount = 25.00  # Set based on service/country
-        
-        # Save to database
         conn = sqlite3.connect('database.db')
         cursor = conn.cursor()
         
@@ -246,8 +353,6 @@ async def buy_number_api(
         
         conn.commit()
         conn.close()
-        
-        # TODO: Deduct amount from user balance
         
         return {
             "success": True,
@@ -261,25 +366,20 @@ async def buy_number_api(
         print(f"Error buying number: {e}")
         return JSONResponse(
             status_code=500,
-            content={
-                "success": False,
-                "error": "Failed to purchase number"
-            }
+            content={"success": False, "error": "Failed to purchase number"}
         )
-
 
 @app.post("/api/update-sms-status")
 async def update_sms_status(
     request: Request,
     order_id: str = Form(...),
-    status: str = Form(...)  # 'received', 'timeout', 'cancelled'
+    status: str = Form(...)
 ):
     """Update SMS status when SMS is received"""
     try:
         conn = sqlite3.connect('database.db')
         cursor = conn.cursor()
         
-        # Determine order status based on SMS status
         if status == 'received':
             order_status = 'completed'
         elif status == 'timeout':
@@ -291,38 +391,175 @@ async def update_sms_status(
         
         cursor.execute("""
             UPDATE number_orders 
-            SET sms_status = ?, 
-                order_status = ?,
-                updated_at = CURRENT_TIMESTAMP
+            SET sms_status = ?, order_status = ?, updated_at = CURRENT_TIMESTAMP
             WHERE order_id = ?
         """, (status, order_status, order_id))
         
         conn.commit()
         conn.close()
         
-        return {
-            "success": True,
-            "message": f"Status updated to {status}"
-        }
+        return {"success": True, "message": f"Status updated to {status}"}
         
     except Exception as e:
         print(f"Error updating SMS status: {e}")
         return JSONResponse(
             status_code=500,
-            content={
-                "success": False,
-                "error": "Failed to update status"
-            }
+            content={"success": False, "error": "Failed to update status"}
         )
 
+# ✅ WALLET API ROUTES
+@app.get("/api/wallet/balance")
+async def get_wallet_balance(request: Request):
+    """Get user wallet balance"""
+    try:
+        current_user = get_current_user(request)
+        user_id = current_user["user_id"]
+        
+        conn = sqlite3.connect('database.db')
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        
+        cursor.execute("SELECT balance FROM users WHERE id = ?", (user_id,))
+        result = cursor.fetchone()
+        
+        balance = float(result['balance']) if result and result['balance'] else 0.0
+        conn.close()
+        
+        return {"success": True, "balance": balance}
+        
+    except Exception as e:
+        print(f"❌ Balance API error: {e}")
+        return JSONResponse(
+            status_code=500,
+            content={"success": False, "error": str(e), "balance": 0.0}
+        )
 
-# ✅ Register all existing routers FIRST
+@app.get("/api/wallet/transactions")  
+async def get_wallet_transactions(request: Request):
+    """Get user wallet transactions"""
+    try:
+        current_user = get_current_user(request)
+        user_id = current_user["user_id"]
+        
+        conn = sqlite3.connect('database.db')
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            SELECT type, amount, reason, status, created_at
+            FROM wallet_transactions 
+            WHERE user_id = ? 
+            ORDER BY created_at DESC
+            LIMIT 50
+        """, (user_id,))
+        
+        rows = cursor.fetchall()
+        conn.close()
+        
+        transactions = []
+        for row in rows:
+            transactions.append({
+                'type': row['type'],
+                'amount': float(row['amount']),
+                'reason': row['reason'],
+                'status': row['status'], 
+                'created_at': row['created_at']
+            })
+        
+        return {"success": True, "transactions": transactions}
+        
+    except Exception as e:
+        print(f"❌ Transactions API error: {e}")
+        return JSONResponse(
+            status_code=500,
+            content={"success": False, "error": str(e), "transactions": []}
+        )
+
+@app.post("/api/wallet/add-money")
+async def add_money_to_wallet(
+    request: Request,
+    amount: float = Form(...),
+    payment_method: str = Form(default="manual")
+):
+    """Add money to wallet"""
+    try:
+        current_user = get_current_user(request)
+        user_id = current_user["user_id"]
+        
+        if amount < 50:
+            return JSONResponse(
+                status_code=400,
+                content={"success": False, "error": "Minimum amount is ₹50"}
+            )
+        
+        if amount > 5000:
+            return JSONResponse(
+                status_code=400,
+                content={"success": False, "error": "Maximum amount is ₹5000"}
+            )
+        
+        conn = sqlite3.connect('database.db')
+        cursor = conn.cursor()
+        
+        transaction_id = f"TXN{int(time.time())}"
+        
+        cursor.execute("""
+            INSERT INTO wallet_transactions 
+            (user_id, transaction_id, type, amount, reason, status)
+            VALUES (?, ?, 'credit', ?, ?, 'completed')
+        """, (user_id, transaction_id, amount, f"Money added via {payment_method}"))
+        
+        cursor.execute("""
+            UPDATE users 
+            SET balance = COALESCE(balance, 0) + ? 
+            WHERE id = ?
+        """, (amount, user_id))
+        
+        cursor.execute("SELECT balance FROM users WHERE id = ?", (user_id,))
+        result = cursor.fetchone()
+        new_balance = float(result[0]) if result else amount
+        
+        conn.commit()
+        conn.close()
+        
+        return {
+            "success": True,
+            "message": f"₹{amount:.2f} added successfully!",
+            "balance": new_balance,
+            "transaction_id": transaction_id
+        }
+        
+    except Exception as e:
+        print(f"❌ Add money API error: {e}")
+        return JSONResponse(
+            status_code=500,
+            content={"success": False, "error": str(e)}
+        )
+
+@app.get("/api/auth/me")
+async def get_current_user_info(request: Request):
+    """Get current user info"""
+    try:
+        current_user = get_current_user(request)
+        return {
+            "success": True,
+            "user": {
+                "id": current_user["user_id"],
+                "username": current_user.get("username", "User"),
+                "email": current_user.get("email", "")
+            }
+        }
+    except Exception as e:
+        return JSONResponse(
+            status_code=401,
+            content={"success": False, "error": "Authentication required"}
+        )
+
+# ✅ Register all existing routers
 register_all_routers(app)
 
-
-# ✅ ADD SMSMan routes with /api/ prefix - IMPORTANT!
+# ✅ ADD SMSMan routes
 app.include_router(smsman_router, prefix="/api/smsman", tags=["SMSMan API"])
-
 
 # Frontend Configuration
 frontend_dir = "frontend"
@@ -333,14 +570,12 @@ if os.path.exists(assets_dir):
 else:
     print(f"⚠️ Assets directory not found at: {assets_dir}")
 
-
 # Helper for HTML file serving
 def serve_html_file(page: str, fallback_html: str):
     page_path = os.path.join(frontend_dir, f"{page}.html")
     if os.path.exists(page_path):
         return FileResponse(page_path, media_type='text/html')
     return HTMLResponse(content=fallback_html, status_code=200)
-
 
 # Page Routes
 @app.get("/", response_class=HTMLResponse)
@@ -374,36 +609,29 @@ async def serve_root():
     """
     return HTMLResponse(content=html_content, status_code=200)
 
-
 @app.get("/signup", response_class=HTMLResponse)
 async def serve_signup():
     return serve_html_file("signup", "<h1>Signup - File not found</h1>")
-
 
 @app.get("/login", response_class=HTMLResponse)
 async def serve_login():
     return serve_html_file("login", "<h1>Login - File not found</h1>")
 
-
 @app.get("/dashboard", response_class=HTMLResponse)
 async def serve_dashboard():
     return serve_html_file("dashboard", "<h1>Dashboard - File not found</h1><p>Please create frontend/dashboard.html</p>")
-
 
 @app.get("/wallet", response_class=HTMLResponse)
 async def serve_wallet():
     return serve_html_file("wallet", "<h1>Wallet - File not found</h1>")
 
-
 @app.get("/add-money", response_class=HTMLResponse)
 async def serve_add_money():
     return serve_html_file("add_money", "<h1>Add Money - File not found</h1>")
 
-
 @app.get("/buy-number", response_class=HTMLResponse)
 async def serve_buy_number():
     return serve_html_file("buy_number", "<h1>Buy Number - File not found</h1>")
-
 
 @app.get("/history", response_class=HTMLResponse)
 async def serve_history():
@@ -458,7 +686,6 @@ async def serve_history():
     </html>
     """)
 
-
 # ✅ API Health Check
 @app.get("/health")
 async def health_check():
@@ -468,7 +695,6 @@ async def health_check():
         "version": "1.0.0",
         "features": ["Authentication", "Wallet", "SMSMan Integration", "History Tracking"]
     }
-
 
 # ✅ API Root Check  
 @app.get("/api")
@@ -487,14 +713,10 @@ async def api_root():
         }
     }
 
-
 @app.on_event("startup")
 async def startup_event():
     print("🚀 BrandOtp API Starting...")
-    
-    # Initialize database
     init_database()
-    
     print(f"📁 Frontend directory: {os.path.abspath(frontend_dir)}")
     print("🏠 Home: http://localhost:8000/")
     print("🔐 Login: http://localhost:8000/login")
@@ -507,13 +729,11 @@ async def startup_event():
     print("📊 Number History API: http://localhost:8000/api/history/numbers")
     print("📖 API Docs: http://localhost:8000/docs")
 
-
 @app.on_event("shutdown")
 async def shutdown_event():
     print("🛑 BrandOtp API Shutting down...")
     with suppress(asyncio.CancelledError):
         await asyncio.sleep(0.1)
-
 
 @app.get("/{path:path}")
 async def serve_spa(path: str):
@@ -537,7 +757,6 @@ async def serve_spa(path: str):
         status_code=404
     )
 
-
 if __name__ == "__main__":
     print("🚀 Starting BrandOtp API Server...")
     print("📖 Docs: http://localhost:8000/docs")
@@ -553,378 +772,3 @@ if __name__ == "__main__":
         reload=False,
         log_level="info"
     )
-# Add these imports at the top
-import sqlite3
-import time
-from datetime import datetime
-
-# Add these routes after your existing routes
-
-@app.get("/api/wallet/balance")
-async def get_wallet_balance(request: Request):
-    """Get user wallet balance - SQLite version"""
-    try:
-        # Get user from session/token (simplified)
-       current_user = get_current_user(request)
-        user_id = current_user["user_id"]
-        
-        # Get balance from SQLite database
-        conn = sqlite3.connect('database.db')
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-        
-        cursor.execute("SELECT balance FROM users WHERE id = ?", (user_id,))
-        result = cursor.fetchone()
-        
-        balance = float(result['balance']) if result and result['balance'] else 0.0
-        conn.close()
-        
-        return {
-            "success": True,
-            "balance": balance
-        }
-        
-    except Exception as e:
-        print(f"❌ Balance API error: {e}")
-        return JSONResponse(
-            status_code=500,
-            content={"success": False, "error": str(e), "balance": 0.0}
-        )
-
-
-@app.get("/api/wallet/transactions")  
-async def get_wallet_transactions(request: Request):
-    """Get user wallet transactions - SQLite version"""
-    try:
-      current_user = get_current_user(request)
-        user_id = current_user["user_id"]
-        
-        # Create wallet_transactions table if not exists
-        conn = sqlite3.connect('database.db')
-        cursor = conn.cursor()
-        
-        cursor.execute('''
-        CREATE TABLE IF NOT EXISTS wallet_transactions (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
-            transaction_id TEXT UNIQUE,
-            type TEXT NOT NULL,
-            amount REAL NOT NULL,
-            reason TEXT,
-            status TEXT DEFAULT 'completed',
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-        ''')
-        
-        # Get transactions
-        conn.row_factory = sqlite3.Row
-        cursor.execute("""
-            SELECT type, amount, reason, status, created_at
-            FROM wallet_transactions 
-            WHERE user_id = ? 
-            ORDER BY created_at DESC
-            LIMIT 50
-        """, (user_id,))
-        
-        rows = cursor.fetchall()
-        conn.close()
-        
-        # Convert to list of dicts
-        transactions = []
-        for row in rows:
-            transactions.append({
-                'type': row['type'],
-                'amount': float(row['amount']),
-                'reason': row['reason'],
-                'status': row['status'], 
-                'created_at': row['created_at']
-            })
-        
-        return {
-            "success": True,
-            "transactions": transactions
-        }
-        
-    except Exception as e:
-        print(f"❌ Transactions API error: {e}")
-        return JSONResponse(
-            status_code=500,
-            content={"success": False, "error": str(e), "transactions": []}
-        )
-
-
-@app.post("/api/wallet/add-money")
-async def add_money_to_wallet(
-    request: Request,
-    amount: float = Form(...),
-    payment_method: str = Form(default="manual")
-):
-    """Add money to wallet - SQLite version"""
-    try:
-       current_user = get_current_user(request)
-        user_id = current_user["user_id"]
-        
-        # Validate amount
-        if amount < 50:
-            return JSONResponse(
-                status_code=400,
-                content={"success": False, "error": "Minimum amount is ₹50"}
-            )
-        
-        if amount > 5000:
-            return JSONResponse(
-                status_code=400,
-                content={"success": False, "error": "Maximum amount is ₹5000"}
-            )
-        
-        conn = sqlite3.connect('database.db')
-        cursor = conn.cursor()
-        
-        # Generate transaction ID
-        transaction_id = f"TXN{int(time.time())}"
-        
-        # Add transaction record
-        cursor.execute("""
-            INSERT INTO wallet_transactions 
-            (user_id, transaction_id, type, amount, reason, status)
-            VALUES (?, ?, 'credit', ?, ?, 'completed')
-        """, (user_id, transaction_id, amount, f"Money added via {payment_method}"))
-        
-        # Update user balance
-        cursor.execute("""
-            UPDATE users 
-            SET balance = COALESCE(balance, 0) + ? 
-            WHERE id = ?
-        """, (amount, user_id))
-        
-        # Get new balance
-        cursor.execute("SELECT balance FROM users WHERE id = ?", (user_id,))
-        result = cursor.fetchone()
-        new_balance = float(result[0]) if result else amount
-        
-        conn.commit()
-        conn.close()
-        
-        return {
-            "success": True,
-            "message": f"₹{amount:.2f} added successfully!",
-            "balance": new_balance,
-            "transaction_id": transaction_id
-        }
-        
-    except Exception as e:
-        print(f"❌ Add money API error: {e}")
-        return JSONResponse(
-            status_code=500,
-            content={"success": False, "error": str(e)}
-        )
-
-
-# Also add authentication endpoint
-@app.get("/api/auth/me")
-async def get_current_user_info(request: Request):
-    """Get current user info"""
-    try:
-      current_user = get_current_user(request)
-        return {
-            "success": True,
-            "user": {
-                "id": current_user["user_id"],
-                "username": current_user.get("username", "User"),
-                "email": current_user.get("email", "")
-            }
-        }
-    except Exception as e:
-        return JSONResponse(
-            status_code=401,
-            content={"success": False, "error": "Authentication required"}
-        )
-# Add these authentication functions and routes AFTER imports and BEFORE existing routes
-
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Verify password against hash"""
-    return pwd_context.verify(plain_password, hashed_password)
-
-def get_password_hash(password: str) -> str:
-    """Hash password"""
-    return pwd_context.hash(password)
-
-def create_access_token(data: dict, expires_delta: timedelta = None):
-    """Create JWT access token"""
-    to_encode = data.copy()
-    if expires_delta:
-        expire = datetime.utcnow() + expires_delta
-    else:
-        expire = datetime.utcnow() + timedelta(minutes=15)
-    
-    to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-    return encoded_jwt
-
-# ✅ AUTHENTICATION ROUTES - ADD THESE
-@app.post("/api/auth/login")
-async def login_api(
-    request: Request,
-    email: str = Form(...),
-    password: str = Form(...)
-):
-    """User login API"""
-    try:
-        print(f"🔐 Login attempt for email: {email}")
-        
-        # Get user from database
-        conn = sqlite3.connect('database.db')
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-        
-        cursor.execute("SELECT id, username, email, password FROM users WHERE email = ?", (email,))
-        user = cursor.fetchone()
-        conn.close()
-        
-        if not user:
-            print("❌ User not found")
-            return JSONResponse(
-                status_code=401,
-                content={
-                    "success": False,
-                    "detail": "Invalid email or password"
-                }
-            )
-        
-        # Verify password
-        if not verify_password(password, user['password']):
-            print("❌ Invalid password")
-            return JSONResponse(
-                status_code=401,
-                content={
-                    "success": False,
-                    "detail": "Invalid email or password"
-                }
-            )
-        
-        # Create access token
-        access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-        access_token = create_access_token(
-            data={"sub": user['email'], "user_id": user['id']},
-            expires_delta=access_token_expires
-        )
-        
-        print(f"✅ Login successful for user: {user['username']}")
-        
-        return {
-            "success": True,
-            "message": "Login successful",
-            "access_token": access_token,
-            "token_type": "bearer",
-            "user": {
-                "id": user['id'],
-                "username": user['username'],
-                "email": user['email']
-            }
-        }
-        
-    except Exception as e:
-        print(f"❌ Login error: {e}")
-        return JSONResponse(
-            status_code=500,
-            content={
-                "success": False,
-                "detail": "Internal server error"
-            }
-        )
-
-@app.post("/api/auth/signup")
-async def signup_api(
-    request: Request,
-    username: str = Form(...),
-    email: str = Form(...),
-    password: str = Form(...)
-):
-    """User signup API"""
-    try:
-        print(f"📝 Signup attempt for email: {email}")
-        
-        # Validate inputs
-        if len(password) < 6:
-            return JSONResponse(
-                status_code=400,
-                content={
-                    "success": False,
-                    "detail": "Password must be at least 6 characters long"
-                }
-            )
-        
-        # Check if user already exists
-        conn = sqlite3.connect('database.db')
-        cursor = conn.cursor()
-        
-        cursor.execute("SELECT id FROM users WHERE email = ?", (email,))
-        existing_user = cursor.fetchone()
-        
-        if existing_user:
-            conn.close()
-            return JSONResponse(
-                status_code=400,
-                content={
-                    "success": False,
-                    "detail": "Email already registered"
-                }
-            )
-        
-        # Hash password and create user
-        hashed_password = get_password_hash(password)
-        
-        cursor.execute("""
-            INSERT INTO users (username, email, password, balance)
-            VALUES (?, ?, ?, 0.0)
-        """, (username, email, hashed_password))
-        
-        user_id = cursor.lastrowid
-        conn.commit()
-        conn.close()
-        
-        print(f"✅ User created successfully: {username}")
-        
-        return {
-            "success": True,
-            "message": "Account created successfully",
-            "user_id": user_id
-        }
-        
-    except Exception as e:
-        print(f"❌ Signup error: {e}")
-        return JSONResponse(
-            status_code=500,
-            content={
-                "success": False,
-                "detail": "Internal server error"
-            }
-        )
-
-# Update the get_current_user function
-async def get_current_user(request: Request):
-    """Get current user from session/token"""
-    try:
-        # Try to get token from Authorization header
-        authorization = request.headers.get("Authorization")
-        if authorization and authorization.startswith("Bearer "):
-            token = authorization.split(" ")[1]
-            
-            # Decode JWT token
-            payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-            email = payload.get("sub")
-            user_id = payload.get("user_id")
-            
-            if email and user_id:
-                return {"user_id": user_id, "email": email}
-        
-        # Fallback for demo (remove in production)
-        return {"user_id": 1, "username": "demo_user", "email": "demo@example.com"}
-        
-    except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=401, detail="Token expired")
-    except jwt.JWTError:
-        raise HTTPException(status_code=401, detail="Invalid token")
-
-
-
