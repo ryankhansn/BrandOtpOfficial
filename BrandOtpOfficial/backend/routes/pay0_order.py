@@ -9,7 +9,7 @@ router = APIRouter()
 from pydantic import BaseModel, Field, constr
 
 class OrderBody(BaseModel):
-    mobile: constr(pattern=r"^\d{10}$")       # ⬅️  regex → pattern
+   mobile: constr(regex=r"^\d{10}$")  # ✅ Works in v1
     amount: float = Field(gt=49, lt=5001)
     remark1: str | None = None
     remark2: str | None = None
@@ -32,3 +32,4 @@ def pay0_create(body: OrderBody):
         "order_id"   : res["result"]["orderId"],
         "payment_url": res["result"]["payment_url"]
     }
+
