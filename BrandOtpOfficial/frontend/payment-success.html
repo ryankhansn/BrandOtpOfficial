@@ -60,6 +60,13 @@
             margin-bottom: 20px;
             position: relative;
             z-index: 1;
+            animation: bounceIn 0.8s ease-out;
+        }
+        
+        @keyframes bounceIn {
+            0% { transform: scale(0); opacity: 0; }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); opacity: 1; }
         }
         
         .success-title {
@@ -167,6 +174,27 @@
             color: #28a745;
         }
         
+        /* Progress Bar */
+        .progress-container {
+            width: 100%;
+            height: 4px;
+            background: #e0e0e0;
+            border-radius: 2px;
+            overflow: hidden;
+            margin-top: 15px;
+        }
+        
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #28a745 0%, #20c997 100%);
+            animation: progressAnimation 5s linear;
+        }
+        
+        @keyframes progressAnimation {
+            from { width: 100%; }
+            to { width: 0%; }
+        }
+        
         /* MOBILE RESPONSIVE */
         @media (max-width: 480px) {
             .success-header {
@@ -210,12 +238,12 @@
         <!-- SUCCESS BODY -->
         <div class="success-body">
             <p class="success-message">
-                Great! Your payment has been processed successfully.<br>
-                Your BrandOtp wallet will be updated shortly.
+                🎉 Great! Your payment has been processed successfully.<br>
+                Your BrandOtp wallet has been updated with the amount.
             </p>
 
             <!-- PAYMENT DETAILS -->
-            <div class="success-details">
+            <div class="success-details" id="paymentDetails">
                 <div class="detail-item">
                     <span class="detail-label">Gateway:</span>
                     <span class="detail-value">Pay0 🚀</span>
@@ -232,23 +260,26 @@
 
             <!-- ACTION BUTTONS -->
             <div class="action-buttons">
-                <a href="/wallet" class="btn btn-primary">
-                    💰 Go to Wallet
+                <a href="dashboard.html" class="btn btn-primary">
+                    🏠 Go to Dashboard
                 </a>
-                <a href="/dashboard" class="btn btn-secondary">
-                    🏠 Dashboard
+                <a href="wallet.html" class="btn btn-secondary">
+                    💰 View Wallet
                 </a>
             </div>
 
             <!-- AUTO REDIRECT -->
             <div class="auto-redirect">
-                Redirecting to wallet in <span class="countdown" id="countdown">5</span> seconds...
+                Redirecting to dashboard in <span class="countdown" id="countdown">5</span> seconds...
+                <div class="progress-container">
+                    <div class="progress-bar"></div>
+                </div>
             </div>
         </div>
     </div>
 
     <script>
-        // ✅ Auto redirect countdown
+        // ✅ Auto redirect countdown to DASHBOARD
         let countdown = 5;
         const countdownElement = document.getElementById('countdown');
         
@@ -258,18 +289,20 @@
             
             if (countdown <= 0) {
                 clearInterval(countdownTimer);
-                window.location.href = '/wallet';
+                // REDIRECT TO DASHBOARD
+                window.location.href = 'dashboard.html';
             }
         }, 1000);
 
-        // ✅ Handle query parameters
+        // ✅ Handle query parameters from payment gateway
         const urlParams = new URLSearchParams(window.location.search);
         const orderId = urlParams.get('order_id');
         const amount = urlParams.get('amount');
+        const transactionId = urlParams.get('transaction_id');
         
+        // Add Order ID if available
         if (orderId) {
-            // Add order ID to details if available
-            const detailsDiv = document.querySelector('.success-details');
+            const detailsDiv = document.getElementById('paymentDetails');
             const orderDetail = document.createElement('div');
             orderDetail.className = 'detail-item';
             orderDetail.innerHTML = `
@@ -279,16 +312,28 @@
             detailsDiv.insertBefore(orderDetail, detailsDiv.firstChild);
         }
         
+        // Add Amount if available
         if (amount) {
-            // Add amount to details if available
-            const detailsDiv = document.querySelector('.success-details');
+            const detailsDiv = document.getElementById('paymentDetails');
             const amountDetail = document.createElement('div');
             amountDetail.className = 'detail-item';
             amountDetail.innerHTML = `
-                <span class="detail-label">Amount:</span>
-                <span class="detail-value">₹${amount}</span>
+                <span class="detail-label">Amount Paid:</span>
+                <span class="detail-value" style="color: #28a745; font-size: 1.2rem;">₹${parseFloat(amount).toFixed(2)}</span>
             `;
             detailsDiv.insertBefore(amountDetail, detailsDiv.children[1]);
+        }
+        
+        // Add Transaction ID if available
+        if (transactionId) {
+            const detailsDiv = document.getElementById('paymentDetails');
+            const txnDetail = document.createElement('div');
+            txnDetail.className = 'detail-item';
+            txnDetail.innerHTML = `
+                <span class="detail-label">Transaction ID:</span>
+                <span class="detail-value" style="font-size: 0.9rem;">${transactionId}</span>
+            `;
+            detailsDiv.appendChild(txnDetail);
         }
 
         // ✅ Optional: Notify parent window if in iframe
@@ -296,9 +341,25 @@
             window.parent.postMessage({
                 type: 'PAYMENT_SUCCESS',
                 orderId: orderId,
-                amount: amount
+                amount: amount,
+                transactionId: transactionId,
+                timestamp: new Date().toISOString()
             }, '*');
         }
+
+        // ✅ Log success for debugging
+        console.log('✅ Payment Success Page Loaded');
+        console.log('Order ID:', orderId || 'Not provided');
+        console.log('Amount:', amount || 'Not provided');
+        console.log('Transaction ID:', transactionId || 'Not provided');
+        console.log('Redirecting to dashboard in 5 seconds...');
+
+        // ✅ Prevent accidental back button
+        window.history.pushState(null, '', window.location.href);
+        window.addEventListener('popstate', function(event) {
+            window.history.pushState(null, '', window.location.href);
+            alert('Payment completed! Please use the button to navigate.');
+        });
     </script>
 </body>
 </html>
