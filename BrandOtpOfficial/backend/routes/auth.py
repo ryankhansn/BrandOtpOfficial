@@ -4,10 +4,13 @@ from pydantic import BaseModel, EmailStr, StringConstraints
 from typing import Annotated
 import bcrypt
 from datetime import datetime, timedelta
-import jwt
 from bson import ObjectId
 import os
 import traceback
+import jwt  # Ye sirf PyJWT hona chahiye!
+
+# Ya aur safe:
+from jwt import encode, decode
 
 # Import database
 from backend.db import users_collection
