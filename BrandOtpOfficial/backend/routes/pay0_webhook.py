@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Request, Form
 from typing import Optional
-from database import users_collection, transactions_collection
+from backend.database import users_collection, transactions_collection
 from datetime import datetime
 import logging
 
@@ -58,3 +58,4 @@ def pay0_webhook(
 @router.get("/webhook")
 def webhook_test():
     return {"success": True, "message": "Webhook endpoint active", "method": "POST required for actual webhooks"}
+
