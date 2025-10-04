@@ -3,7 +3,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 from pymongo import MongoClient
 
-# Load environment variables
+# Load environment variables (.env handling for local/dev)
 env_path = Path(__file__).parent / '.env'
 load_dotenv(dotenv_path=env_path, override=True)
 
@@ -11,7 +11,6 @@ print(f"✅ python-dotenv loaded successfully from: {env_path}")
 
 # Get MongoDB connection string
 MONGO_URI = os.getenv("MONGO_URI")
-
 if not MONGO_URI:
     # Fallback connection string
     MONGO_URI = "mongodb+srv://ryankhann703_db_user:Bs6DNplkZwqY5ppN@brandotpofficial.mbrslgk.mongodb.net/brandotp?retryWrites=true&w=majority&appName=BrandOtpOfficial"
@@ -24,8 +23,6 @@ DB_NAME = "brandotp"
 
 try:
     print("🔄 Connecting to MongoDB Atlas...")
-    
-    # Simple connection with only TLS options (no SSL)
     client = MongoClient(
         MONGO_URI,
         tls=True,
@@ -35,24 +32,15 @@ try:
         connectTimeoutMS=10000,
         socketTimeoutMS=10000
     )
-    
-    # Test connection
     client.admin.command('ping')
     print("✅ MongoDB Atlas connected successfully!")
-    
 except Exception as e:
     print(f"❌ TLS connection failed: {e}")
     print("🔄 Trying basic connection...")
-    
     try:
-        # Fallback: Basic connection without explicit TLS options
-        client = MongoClient(
-            MONGO_URI,
-            serverSelectionTimeoutMS=10000
-        )
+        client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=10000)
         client.admin.command('ping')
         print("✅ MongoDB Atlas connected with basic settings!")
-        
     except Exception as e2:
         print(f"❌ All connection attempts failed: {e2}")
         raise
@@ -60,15 +48,17 @@ except Exception as e:
 # Database setup
 db = client[DB_NAME]
 
-# Collections
+# Collections (Add all you use)
+users_collection = db["users"]
 transactions_collection = db["transactions"]
 services_collection = db["services"]
 orders_collection = db["orders"]
 otp_requests_collection = db["otp_requests"]
 wallets_collection = db["wallets"]
-payments_collection = db["payments"] 
-transactions_collection = db["transactions"]  # ✅ ADD FOR PAY0 INTEGRATION
+payments_collection = db["payments"]
+numbers_collection = db["numbers"]      # If number-related used anywhere
 
+# Helpers / quick accessor
 def get_db():
     return db
 
