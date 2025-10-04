@@ -1,48 +1,48 @@
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, StringConstraints, Field
-from typing import Optional, Annotated
+import os
+import httpx
 
-router = APIRouter()
+PAY0_API_URL = "https://pay0.shop/api/create-order"
+PAY0_USER_TOKEN = os.getenv("PAY0_USER_TOKEN")  # apni env me rakho
 
-# Correct Pydantic v2 order model:
-class OrderBody(BaseModel):
-    # Mobile must be 10 digits (string with exactly 10 numeric chars):
-    mobile: Annotated[
-        str,
-        StringConstraints(min_length=10, max_length=10, pattern=r'^\d{10}$')
-    ]
+async def create_pay0_order_request(mobile, name, amount, order_id, redirect_url):
+    headers = {
+        "Content-Type": "application/x-www-form-urlencoded"
+    }
+    data = {
+        "customermobile": mobile,
+        "customername": name,
+        "usertoken": PAY0_USER_TOKEN,
+        "amount": amount,
+        "orderid": order_id,
+        "redirecturl": redirect_url,
+        "remark1": "Wallet Topup",
+        "remark2": ""
+    }
+    async with httpx.AsyncClient() as client:
+        resp = await client.post(PAY0_API_URL, data=data, headers=headers)
+        result = resp.json()
+        if not result.get("status"):
+            raise Exception(f"Pay0 error: {result.get('message')}")
+        return result["result"]["paymenturl"]  # payment page URL
 
-    # Amount must be float, 50 to 5000 rupees (exclusive):
-    amount: float = Field(gt=49, lt=5001)
-    # UPI ID is optional
-    upi_id: Optional[str] = None
-
+# FastAPI route me use karo:
 @router.post("/create-order")
 async def create_pay0_order(order: OrderBody):
-    """Create Pay0 order"""
     try:
+        payment_url = await create_pay0_order_request(
+            order.mobile,
+            "User",  # yahan name chaho to user se lo
+            order.amount,
+            f"ORD_{order.mobile}_{int(order.amount)}",
+            "https://yourdomain.com/payment-success"
+        )
         return {
             "success": True,
             "order_id": f"ORD_{order.mobile}_{int(order.amount)}",
             "amount": order.amount,
             "mobile": order.mobile,
-            "payment_url": "https://pay0.in/demo-payment-page",
+            "payment_url": payment_url,
             "message": "Order created successfully"
         }
-    except HTTPException:
-        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Order creation failed: {str(e)}")
-
-@router.get("/order-status/{order_id}")
-async def get_order_status(order_id: str):
-    """Get Pay0 order status"""
-    try:
-        return {
-            "success": True,
-            "order_id": order_id,
-            "status": "pending",
-            "message": "Order status retrieved"
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Status check failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
