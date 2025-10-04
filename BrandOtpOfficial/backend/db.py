@@ -61,7 +61,7 @@ except Exception as e:
 db = client[DB_NAME]
 
 # Collections
-users_collection = db["users"]
+transactions_collection = db["transactions"]
 services_collection = db["services"]
 orders_collection = db["orders"]
 otp_requests_collection = db["otp_requests"]
