@@ -66,7 +66,8 @@ services_collection = db["services"]
 orders_collection = db["orders"]
 otp_requests_collection = db["otp_requests"]
 wallets_collection = db["wallets"]
-payments_collection = db["payments"]  # ✅ ADD FOR PAY0 INTEGRATION
+payments_collection = db["payments"] 
+transactions_collection = db["transactions"]  # ✅ ADD FOR PAY0 INTEGRATION
 
 def get_db():
     return db
