@@ -38,11 +38,11 @@ form.addEventListener("submit", async e=>{
     if(!/^\d{10}$/.test(mobile.value)) throw new Error("Enter valid 10-digit mobile");
 
     /* hit FastAPI */
-    const res = await fetch(`${API_BASE_URL}/api/payments/pay0/order`,{
-      method:"POST",
-      headers:{ "Content-Type":"application/json" },
-      body: JSON.stringify({ mobile:mobile.value, amount:amt })
-    });
+   const res = await fetch(`${API_BASE_URL}/api/payments/pay0/create-order`, {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ mobile: mobile.value, amount: amt })
+});
 
     if(!res.ok){
       const err = await res.json();
