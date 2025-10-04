@@ -8,6 +8,8 @@ from bson import ObjectId
 # Import dependencies
 from backend.db import get_db, users_collection, wallets_collection
 from backend.utils.auth_utils import get_current_user, get_current_active_user
+from backend.database import users_collection, transactions_collection
+
 
 # ✅ CREATE ROUTER INSTANCE
 router = APIRouter()
