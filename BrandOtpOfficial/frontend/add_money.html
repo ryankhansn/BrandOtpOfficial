@@ -81,33 +81,18 @@ small{display:block;margin-top:6px;font-size:.85rem;color:#666}
   <section class="add-money-card">
     <h2 class="card-title">💰 Wallet Top-up</h2>
 
-    <form id="addMoneyForm" autocomplete="off">
-      <!-- amount -->
-      <div class="form-group">
-        <label for="amount">Amount (₹50–₹5,000)</label>
-        <input id="amount" type="number" min="50" max="5000" required>
-        <div class="amount-shortcuts">
-          <button type="button" class="amount-btn" onclick="setAmount(50)">₹50</button>
-          <button type="button" class="amount-btn" onclick="setAmount(100)">₹100</button>
-          <button type="button" class="amount-btn" onclick="setAmount(500)">₹500</button>
-          <button type="button" class="amount-btn" onclick="setAmount(1000)">₹1000</button>
-          <button type="button" class="amount-btn" onclick="setAmount(2000)">₹2000</button>
-          <button type="button" class="amount-btn" onclick="setAmount(5000)">₹5000</button>
-        </div>
-      </div>
-
-      <!-- mobile -->
-      <div class="form-group">
-        <label for="mobile_number">Mobile Number</label>
-        <input id="mobile_number" type="tel" pattern="[0-9]{10}" maxlength="10" required>
-        <small>Used for payment processing</small>
-      </div>
-
-      <!-- hidden paymentMethod -->
-      <input type="hidden" name="paymentMethod" value="pay0">
-
-      <button id="addMoneyBtn" class="submit-btn" type="submit">💳 Proceed to Pay0</button>
-    </form>
+   <form id="addMoneyForm" autocomplete="off">
+  <div class="form-group">
+    <label for="amount">Amount (₹50–₹5,000)</label>
+    <input id="amount" type="number" min="50" max="5000" required>
+  </div>
+  <div class="form-group">
+    <label for="mobile_number">Mobile Number</label>
+    <input id="mobile_number" type="tel" pattern="[0-9]{10}" maxlength="10" required>
+  </div>
+  <input type="hidden" name="paymentMethod" value="pay0">
+  <button id="addMoneyBtn" class="submit-btn" type="submit">💳 Proceed to Pay0</button>
+</form>
   </section>
 </main>
 
