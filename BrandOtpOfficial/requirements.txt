@@ -7,7 +7,6 @@ dnspython
 requests
 python-multipart
 bcrypt
-jwt
 pymongo
 requests
 PyJWT
@@ -25,5 +24,6 @@ PyYAML
 pylance
 httpx
 Jinja2
+
 
 
