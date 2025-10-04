@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, status
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, StringConstraints
+from typing import Annotated
 import bcrypt
 from datetime import datetime, timedelta
 import jwt
@@ -14,20 +15,25 @@ from backend.db import users_collection
 router = APIRouter()
 
 # JWT Configuration
-SECRET_KEY = os.getenv("SECRET_KEY", "brandotp-secret-key-2024")
+SECRET_KEY = os.getenv("SECRET_KEY", "brandotpsecretkey2025")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 1440  # 24 hours
 
-# Pydantic Models
+# -------------------
+# Pydantic v2 Models
+# -------------------
 class UserSignup(BaseModel):
-    username: str
+    username: Annotated[str, StringConstraints(min_length=4)]
     email: EmailStr
-    password: str
+    password: Annotated[str, StringConstraints(min_length=4)]
 
 class UserLogin(BaseModel):
     email: EmailStr
-    password: str
+    password: Annotated[str, StringConstraints(min_length=4)]
 
+# ---------------------
+# Password utilities
+# ---------------------
 def hash_password(password: str) -> str:
     """Hash password using bcrypt"""
     try:
@@ -45,7 +51,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
         if not plain_password or not hashed_password:
             print(f"❌ Empty password or hash")
             return False
-            
+
         pwd_bytes = plain_password.encode('utf-8')
         hashed_bytes = hashed_password.encode('utf-8')
         result = bcrypt.checkpw(pwd_bytes, hashed_bytes)
@@ -72,21 +78,18 @@ async def signup(user_data: UserSignup):
     """User registration"""
     try:
         print(f"🚀 SIGNUP: {user_data.email}")
-        
+
         # Check existing users
         if users_collection.find_one({"email": user_data.email}):
             raise HTTPException(status_code=400, detail="Email already registered")
-        
         if users_collection.find_one({"username": user_data.username}):
             raise HTTPException(status_code=400, detail="Username already taken")
-        
-        # Validate password length
-        if len(user_data.password) < 4:
-            raise HTTPException(status_code=400, detail="Password must be at least 4 characters")
-        
+
+        # No manual length check needed — model enforces min_length=4
+
         # Hash password
         hashed_password = hash_password(user_data.password)
-        
+
         # Create user document
         user_doc = {
             "username": user_data.username,
@@ -96,16 +99,16 @@ async def signup(user_data: UserSignup):
             "is_active": True,
             "created_at": datetime.utcnow()
         }
-        
+
         # Insert user
         result = users_collection.insert_one(user_doc)
         user_id = str(result.inserted_id)
-        
+
         print(f"✅ SIGNUP: User created {user_id}")
-        
+
         # Create token
         access_token = create_access_token(data={"user_id": user_id, "email": user_data.email})
-        
+
         return {
             "access_token": access_token,
             "token_type": "bearer",
@@ -116,7 +119,7 @@ async def signup(user_data: UserSignup):
                 "balance": 0.0
             }
         }
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -128,36 +131,36 @@ async def login(user_credentials: UserLogin):
     """User login"""
     try:
         print(f"🚀 LOGIN: {user_credentials.email}")
-        
+
         # Find user
         user = users_collection.find_one({"email": user_credentials.email})
         if not user:
             print(f"❌ LOGIN: User not found")
             raise HTTPException(status_code=401, detail="Invalid email or password")
-        
+
         print(f"👤 LOGIN: User found - {user.get('username', 'N/A')}")
-        
+
         # Check password field exists
         if 'password' not in user or user['password'] is None or user['password'] == '':
             print(f"❌ LOGIN: Password field missing")
             raise HTTPException(status_code=401, detail="Account setup incomplete. Please contact support.")
-        
+
         # Verify password
         is_valid = verify_password(user_credentials.password, user['password'])
         if not is_valid:
             print(f"❌ LOGIN: Invalid password")
             raise HTTPException(status_code=401, detail="Invalid email or password")
-        
+
         print(f"✅ LOGIN: Password verified")
-        
+
         # Check if active
         if not user.get("is_active", True):
             raise HTTPException(status_code=401, detail="Account is deactivated")
-        
+
         # Create token
         user_id = str(user["_id"])
         access_token = create_access_token(data={"user_id": user_id, "email": user["email"]})
-        
+
         user_response = {
             "id": user_id,
             "username": user["username"],
@@ -165,15 +168,15 @@ async def login(user_credentials: UserLogin):
             "balance": float(user.get("balance", 0.0)),
             "is_active": user.get("is_active", True)
         }
-        
+
         print(f"✅ LOGIN: Success for {user['username']}")
-        
+
         return {
             "access_token": access_token,
             "token_type": "bearer",
             "user": user_response
         }
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -201,7 +204,7 @@ async def debug_user(email: str):
         user = users_collection.find_one({"email": email})
         if not user:
             return {"message": "User not found"}
-        
+
         return {
             "found": True,
             "has_password": 'password' in user and user['password'] is not None,
@@ -211,7 +214,6 @@ async def debug_user(email: str):
         }
     except Exception as e:
         return {"error": str(e)}
-# Add this endpoint to your existing auth.py file
 
 @router.get("/me")
 async def get_current_user_info():
@@ -219,7 +221,7 @@ async def get_current_user_info():
     try:
         # For now, return demo data since we need to implement proper auth middleware
         # This will be replaced with real token validation later
-        
+
         return {
             "success": True,
             "user": {
@@ -230,7 +232,7 @@ async def get_current_user_info():
                 "is_active": True
             }
         }
-        
+
     except Exception as e:
         print(f"❌ Get user info error: {e}")
         raise HTTPException(status_code=500, detail="Failed to get user info")
