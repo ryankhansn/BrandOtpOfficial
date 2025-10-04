@@ -108,3 +108,4 @@ async def test_user_routes():
             "/api/user/test"
         ]
     }
+
