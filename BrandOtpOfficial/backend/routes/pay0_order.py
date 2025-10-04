@@ -1,28 +1,26 @@
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, StringConstraints
+from pydantic import BaseModel, StringConstraints, Field
 from typing import Optional, Annotated
 
 router = APIRouter()
 
-# Pydantic v2 model for order
+# Correct Pydantic v2 order model:
 class OrderBody(BaseModel):
-    # Mobile must be 10 digits, only numbers allowed by pattern, min/max_length=10
+    # Mobile must be 10 digits (string with exactly 10 numeric chars):
     mobile: Annotated[
         str,
-        StringConstraints(min_length=10, max_length=10, pattern=r"^\d{10}$")
+        StringConstraints(min_length=10, max_length=10, pattern=r'^\d{10}$')
     ]
-    # Amount between 50 and 5000 (both ends exclusive)
-    amount: Annotated[
-        float,
-        StringConstraints(gt=49, lt=5001)
-    ]
-    upi_id: Optional[str] = None  # Optional UPI id
+
+    # Amount must be float, 50 to 5000 rupees (exclusive):
+    amount: float = Field(gt=49, lt=5001)
+    # UPI ID is optional
+    upi_id: Optional[str] = None
 
 @router.post("/create-order")
 async def create_pay0_order(order: OrderBody):
     """Create Pay0 order"""
     try:
-        # No need for .isdigit() check, pattern does it automatically!
         return {
             "success": True,
             "order_id": f"ORD_{order.mobile}_{int(order.amount)}",
