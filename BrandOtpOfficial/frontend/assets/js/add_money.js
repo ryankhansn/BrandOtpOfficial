@@ -43,16 +43,10 @@ form.addEventListener("submit", async e => {
     }
 
     const response = await res.json();
-    // Extract sahi payment link (Pay0 API nested JSON)
-    const pay0Link = 
-      response.payment_url?.result?.paymenturl ||  // recommended
-      response.payment_url?.result?.payment_url || // in case old backend field
-      response.payment_url; // fallback
-
-    if (!pay0Link || typeof pay0Link !== "string")
-      throw new Error("Payment URL missing from server response!");
-
-    window.location.href = pay0Link;
+    if (!response.payment_url || typeof response.payment_url !== "string") {
+      throw new Error("Server did not return a payment link!");
+    }
+    window.location.href = response.payment_url;
 
   } catch (err) {
     showMessage(err.message || "Payment error", "error");
