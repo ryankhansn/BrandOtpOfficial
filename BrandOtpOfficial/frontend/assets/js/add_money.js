@@ -42,8 +42,17 @@ form.addEventListener("submit", async e => {
       throw new Error(err.detail || "Gateway error");
     }
 
-    const { payment_url } = await res.json();
-    window.location.href = payment_url;
+    const response = await res.json();
+    // Extract sahi payment link (Pay0 API nested JSON)
+    const pay0Link = 
+      response.payment_url?.result?.paymenturl ||  // recommended
+      response.payment_url?.result?.payment_url || // in case old backend field
+      response.payment_url; // fallback
+
+    if (!pay0Link || typeof pay0Link !== "string")
+      throw new Error("Payment URL missing from server response!");
+
+    window.location.href = pay0Link;
 
   } catch (err) {
     showMessage(err.message || "Payment error", "error");
