@@ -1,7 +1,6 @@
 // frontend/assets/js/auth.js - The Only Auth File You Need
 
 const API_BASE_URL = window.API_BASE_URL || 'https://brandotpofficial.onrender.com';
-console.log('🔐 Auth System Initialized. API:', API_BASE_URL);
 
 document.addEventListener("DOMContentLoaded", () => {
     const loginForm = document.getElementById("login-form");
@@ -15,12 +14,18 @@ document.addEventListener("DOMContentLoaded", () => {
             tab.classList.add("active");
             document.querySelectorAll(".auth-form").forEach(form => form.classList.remove("active"));
             document.getElementById(`${tab.dataset.tab}-form`).classList.add("active");
-            messageContainer.style.display = 'none'; // Hide messages on tab switch
+            if (messageContainer) messageContainer.style.display = 'none';
         });
     });
 
+    // Automatically switch to signup tab if URL has #signup
+    if (window.location.hash === '#signup') {
+        document.querySelector('.auth-tab[data-tab="signup"]').click();
+    }
+
     // Helper function to show messages
     function showMessage(message, type) {
+        if (!messageContainer) return;
         messageContainer.textContent = message;
         messageContainer.className = `message ${type}-message`;
         messageContainer.style.display = 'block';
@@ -32,10 +37,12 @@ document.addEventListener("DOMContentLoaded", () => {
             e.preventDefault();
             const email = document.getElementById("login-email").value.trim();
             const password = document.getElementById("login-password").value.trim();
+            const button = loginForm.querySelector('button');
+            button.disabled = true;
 
             try {
                 const formData = new URLSearchParams();
-                formData.append('username', email); // FastAPI OAuth2 expects 'username'
+                formData.append('username', email);
                 formData.append('password', password);
 
                 const res = await fetch(`${API_BASE_URL}/api/auth/login`, {
@@ -48,9 +55,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 
                 localStorage.setItem("token", data.access_token);
                 showMessage("✅ Login successful! Redirecting...", 'success');
-                setTimeout(() => window.location.href = "dashboard.html", 1500);
+                setTimeout(() => window.location.href = "dashboard.html", 1000);
             } catch (err) {
                 showMessage(`⚠️ ${err.message}`, 'error');
+                button.disabled = false;
             }
         });
     }
@@ -62,8 +70,12 @@ document.addEventListener("DOMContentLoaded", () => {
             const username = document.getElementById("signup-username").value.trim();
             const email = document.getElementById("signup-email").value.trim();
             const password = document.getElementById("signup-password").value.trim();
+            const button = signupForm.querySelector('button');
+            button.disabled = true;
+
             if (password.length < 6) {
                 showMessage('Password must be at least 6 characters.', 'error');
+                button.disabled = false;
                 return;
             }
 
@@ -79,6 +91,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 showMessage("✅ Signup successful! Please switch to the login tab.", 'success');
             } catch (err) {
                 showMessage(`⚠️ ${err.message}`, 'error');
+            } finally {
+                button.disabled = false;
             }
         });
     }
