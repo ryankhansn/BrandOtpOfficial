@@ -1,7 +1,6 @@
-// frontend/assets/js/login.js - DEBUGGING VERSION
+// frontend/assets/js/login.js - FINAL WORKING VERSION
 
 const API_BASE_URL = window.API_BASE_URL || 'https://brandotpofficial.onrender.com';
-console.log('🔐 Login API is set to:', API_BASE_URL);
 
 document.addEventListener('DOMContentLoaded', () => {
     const loginForm = document.getElementById('loginForm');
@@ -33,36 +32,26 @@ document.addEventListener('DOMContentLoaded', () => {
             const result = await response.json();
 
             if (!response.ok) {
-                throw new Error(result.detail || 'Login failed.');
+                throw new Error(result.detail || 'Login failed. Please check credentials.');
             }
 
             if (result.access_token) {
-                // --- ✅ डीबगिंग शुरू ---
-                console.log('--- LOGIN DEBUGGING ---');
-                console.log('Server sent this access_token:', result.access_token);
-                
-                // टोकन को 'token' नाम से localStorage में सेव करें
+                // --- ✅ यही है सबसे महत्वपूर्ण लाइन ---
+                // हम टोकन को हमेशा 'token' नाम से सेव करेंगे
                 localStorage.setItem('token', result.access_token);
+                // ---------------------------------
                 
-                // तुरंत वापस पढ़ें और देखें कि क्या यह सेव हुआ
-                const savedToken = localStorage.getItem('token');
-                console.log('Value read back from localStorage:', savedToken);
-                
-                if (savedToken) {
-                    console.log('✅ SUCCESS: Token was set in localStorage.');
-                } else {
-                    console.error('❌ CRITICAL ERROR: FAILED to set token in localStorage!');
+                if (result.user) {
+                    localStorage.setItem('user', JSON.stringify(result.user));
                 }
-                console.log('--------------------');
-                // --- डीबगिंग खत्म ---
-                
+
                 messageDiv.className = 'message success-message';
                 messageDiv.textContent = '🎉 Login successful! Redirecting...';
                 messageDiv.style.display = 'block';
 
                 setTimeout(() => {
                     window.location.href = 'dashboard.html';
-                }, 1500);
+                }, 1000);
 
             } else {
                 throw new Error('Token not found in server response.');
