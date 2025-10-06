@@ -23,9 +23,10 @@ def pay0_webhook(
         if status and status.upper() == "SUCCESS":
             payment_amount = float(amount) if amount else 0.0
             user_id = remark1
-            if user_id and users_collection:
-                user = users_collection.find_one({"_id": user_id})
-                if user is not None:
+           if user_id:
+           user = users_collection.find_one({"_id": user_id})
+            if user is not None:
+
 
                     current_balance = float(user.get("balance", 0))
                     new_balance = current_balance + payment_amount
@@ -59,6 +60,7 @@ def pay0_webhook(
 @router.get("/webhook")
 def webhook_test():
     return {"success": True, "message": "Webhook endpoint active", "method": "POST required for actual webhooks"}
+
 
 
 
