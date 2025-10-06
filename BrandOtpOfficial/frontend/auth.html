@@ -3,91 +3,132 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BrandOtp - Authentication</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="/assets/css/styles.css">
+    <title>Authentication - BrandOtp</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .auth-container {
+            background: rgba(255,255,255,0.1);
+            padding: 40px;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+            width: 100%;
+            max-width: 450px;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.2);
+        }
+        .auth-header { text-align: center; margin-bottom: 30px; }
+        .auth-header h1 { font-size: 2.5rem; text-shadow: 0 4px 8px rgba(0,0,0,0.3); }
+        .auth-tabs { display: flex; margin-bottom: 30px; background: rgba(0,0,0,0.2); border-radius: 50px; }
+        .auth-tab {
+            flex: 1;
+            padding: 15px;
+            background: transparent;
+            border: none;
+            color: rgba(255,255,255,0.7);
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .auth-tab.active {
+            background: white;
+            color: #4361ee;
+            border-radius: 50px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+        .auth-form { display: none; }
+        .auth-form.active { display: block; }
+        .form-group { margin-bottom: 25px; }
+        .form-group label { display: block; margin-bottom: 8px; font-weight: 600; opacity: 0.9; }
+        .form-group input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 10px;
+            background: rgba(255,255,255,0.1);
+            color: white;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+        .form-group input:focus {
+            outline: none;
+            border-color: rgba(255,255,255,0.6);
+            background: rgba(255,255,255,0.15);
+        }
+        .form-group input::placeholder { color: rgba(255,255,255,0.7); }
+        .btn-primary {
+            width: 100%; padding: 15px; border: none; border-radius: 50px;
+            background: linear-gradient(45deg, #ff6b6b, #ff8e53);
+            color: white; font-size: 1.1rem; font-weight: 600; cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .btn-primary:hover:not(:disabled) { transform: translateY(-3px); box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
+        .btn-primary:disabled { opacity: 0.7; cursor: not-allowed; }
+        .message {
+            padding: 15px; border-radius: 10px; margin-bottom: 20px; text-align: center;
+            font-weight: 600; display: none;
+        }
+        .success-message { background: rgba(46, 204, 113, 0.2); border: 1px solid rgba(46, 204, 113, 0.3); color: #2ecc71; }
+        .error-message { background: rgba(231, 76, 60, 0.2); border: 1px solid rgba(231, 76, 60, 0.3); color: #e74c3c; }
+        @media (max-width: 768px) {
+            .auth-container { padding: 30px 20px; margin: 10px; }
+            .auth-header h1 { font-size: 2rem; }
+        }
+    </style>
 </head>
-<body class="auth-page">
+<body>
     <div class="auth-container">
-        <div class="auth-card">
-            <div class="auth-header">
-                <h2>BrandOtp</h2>
-                <p>Your trusted OTP service provider</p>
-            </div>
-            
-            <div class="auth-tabs">
-                <button class="auth-tab active" data-tab="login">Login</button>
-                <button class="auth-tab" data-tab="signup">Sign Up</button>
-            </div>
-            
-            <!-- Login Form -->
-            <form id="login-form" class="auth-form active">
-                <div class="form-group">
-                    <label for="login-email">Email</label>
-                    <div class="input-group">
-                        <i class="fas fa-envelope"></i>
-                        <input type="email" id="login-email" name="email" required placeholder="Enter your email">
-                    </div>
-                </div>
-                
-                <div class="form-group">
-                    <label for="login-password">Password</label>
-                    <div class="input-group">
-                        <i class="fas fa-lock"></i>
-                        <input type="password" id="login-password" name="password" required placeholder="Enter your password">
-                    </div>
-                </div>
-                
-                <div class="form-error" id="login-error"></div>
-                
-                <button type="submit" class="btn btn-primary btn-block">Login</button>
-            </form>
-            
-            <!-- Sign Up Form -->
-            <form id="signup-form" class="auth-form">
-                <div class="form-group">
-                    <label for="signup-username">Username</label>
-                    <div class="input-group">
-                        <i class="fas fa-user"></i>
-                        <input type="text" id="signup-username" name="username" required placeholder="Choose a username">
-                    </div>
-                </div>
-                
-                <div class="form-group">
-                    <label for="signup-email">Email</label>
-                    <div class="input-group">
-                        <i class="fas fa-envelope"></i>
-                        <input type="email" id="signup-email" name="email" required placeholder="Enter your email">
-                    </div>
-                </div>
-                
-                <div class="form-group">
-                    <label for="signup-password">Password</label>
-                    <div class="input-group">
-                        <i class="fas fa-lock"></i>
-                        <input type="password" id="signup-password" name="password" required placeholder="Create a password">
-                    </div>
-                </div>
-                
-                <div class="form-group">
-                    <label for="signup-confirm-password">Confirm Password</label>
-                    <div class="input-group">
-                        <i class="fas fa-lock"></i>
-                        <input type="password" id="signup-confirm-password" name="confirm_password" required placeholder="Confirm your password">
-                    </div>
-                </div>
-                
-                <div class="form-error" id="signup-error"></div>
-                
-                <button type="submit" class="btn btn-primary btn-block">Sign Up</button>
-            </form>
+        <div class="auth-header">
+            <h1>🔥 BrandOtp</h1>
         </div>
+        <div class="auth-tabs">
+            <button class="auth-tab active" data-tab="login">Login</button>
+            <button class="auth-tab" data-tab="signup">Sign Up</button>
+        </div>
+        
+        <div id="messageContainer" class="message"></div>
+
+        <!-- Login Form -->
+        <form id="login-form" class="auth-form active">
+            <div class="form-group">
+                <label for="login-email">Email Address</label>
+                <input type="email" id="login-email" placeholder="Enter your email" required>
+            </div>
+            <div class="form-group">
+                <label for="login-password">Password</label>
+                <input type="password" id="login-password" placeholder="Enter your password" required>
+            </div>
+            <button type="submit" class="btn-primary">Login</button>
+        </form>
+
+        <!-- Sign Up Form -->
+        <form id="signup-form" class="auth-form">
+            <div class="form-group">
+                <label for="signup-username">Username</label>
+                <input type="text" id="signup-username" placeholder="Choose a username" required>
+            </div>
+            <div class="form-group">
+                <label for="signup-email">Email Address</label>
+                <input type="email" id="signup-email" placeholder="Enter your email" required>
+            </div>
+            <div class="form-group">
+                <label for="signup-password">Password</label>
+                <input type="password" id="signup-password" placeholder="Create a password (min 6 chars)" required>
+            </div>
+            <button type="submit" class="btn-primary">Create Account</button>
+        </form>
     </div>
 
-    <!-- Scripts (sahi order me load karna hai) -->
-    <script src="/frontend/assets/js/api.js"></script>
-    <script src="/frontend/assets/js/auth.js"></script>
-    <script src="/frontend/assets/js/login.js"></script>
-    <script src="/frontend/assets/js/signup.js"></script>
+    <script src="assets/js/auth.js"></script>
 </body>
 </html>
