@@ -1,33 +1,34 @@
-from fastapi import APIRouter
-from .pay0_order import router as pay0_order_router
-from .pay0_webhook import router as pay0_webhook_router
-
-router = APIRouter()
-router.include_router(pay0_order_router, prefix="/pay0", tags=["Pay0"])
-router.include_router(pay0_webhook_router, prefix="/pay0", tags=["Pay0"])
-# इस कोड को अपनी payments.py या pay0_order.py फाइल में जोड़ें
+# backend/routes/payments.py
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import JSONResponse
 import requests
 import os
 from dotenv import load_dotenv
-
-# अपने प्रोजेक्ट के सही लोकेशन से इम्पोर्ट करें
-from backend.utils.auth_utils import get_current_user
-from backend.utils.wallet_utils import credit_user_wallet
-from backend.db import wallets_collection, users_collection
 from bson import ObjectId
 
-# सुनिश्चित करें कि आपका राउटर पहले से बना हुआ है
-# अगर यह payments.py है, तो यह लाइन पहले से होगी:
-# router = APIRouter()
-# अगर आप pay0_order.py में जोड़ रहे हैं, तो सुनिश्चित करें कि आप उसी के राउटर का उपयोग कर रहे हैं।
+# अपने प्रोजेक्ट के अन्य राउटर्स को इम्पोर्ट करें
+from .pay0_order import router as pay0_order_router
+from .pay0_webhook import router as pay0_webhook_router
 
-# .env फाइल से PAY0 की सीक्रेट key लोड करें (सुरक्षा के लिए)
+# अपने प्रोजेक्ट के यूटिलिटी और डीबी को इम्पोर्ट करें
+from backend.utils.auth_utils import get_current_user
+from backend.utils.wallet_utils import credit_user_wallet
+from backend.db import wallets_collection
+
+# यह इस फ़ाइल का मुख्य राउटर है
+router = APIRouter()
+
+# अन्य राउटर्स को इसमें शामिल करें (आपका मौजूदा कोड)
+router.include_router(pay0_order_router, prefix="/pay0", tags=["Pay0"])
+# हम वेबहूक का उपयोग नहीं कर रहे हैं, लेकिन इसे यहाँ छोड़ सकते हैं
+router.include_router(pay0_webhook_router, prefix="/pay0", tags=["Pay0"])
+
+# .env फ़ाइल से वेरिएबल्स लोड करें
 load_dotenv()
-PAY0_USER_TOKEN = os.getenv("PAY0_API_KEY") # यह आपकी Pay0 API Key है
+PAY0_API_KEY = os.getenv("PAY0_API_KEY")
 
+# --- हमारा नया एंडपॉइंट ---
 @router.post("/check-status/{order_id}")
 async def check_payment_status(order_id: str, current_user: dict = Depends(get_current_user)):
     """
@@ -48,12 +49,12 @@ async def check_payment_status(order_id: str, current_user: dict = Depends(get_c
         # 2. Pay0 API से पेमेंट का स्टेटस पूछें
         pay0_url = "https://pay0.shop/api/check-order-status"
         payload = {
-            "user_token": PAY0_USER_TOKEN, # अपनी Pay0 API Key का उपयोग करें
+            "user_token": PAY0_API_KEY, # अपनी Pay0 API Key का उपयोग करें
             "order_id": order_id
         }
         
         response = requests.post(pay0_url, data=payload)
-        response.raise_for_status()  # HTTP एरर होने पर एक्सेप्शन उठाएगा
+        response.raise_for_status()
 
         data = response.json()
 
@@ -78,7 +79,6 @@ async def check_payment_status(order_id: str, current_user: dict = Depends(get_c
                 )
                 return JSONResponse(status_code=200, content={"success": True, "message": "Payment successful! Your wallet has been credited."})
             else:
-                # अगर वॉलेट क्रेडिट फेल होता है
                 raise HTTPException(status_code=500, detail=credit_result.get("error", "Failed to update wallet balance."))
 
         elif data.get("status") == "PENDING":
