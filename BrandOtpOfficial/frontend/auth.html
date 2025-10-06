@@ -4,129 +4,130 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Authentication - BrandOtp</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        :root {
+            --primary-color: #6a11cb;
+            --secondary-color: #2575fc;
+            --text-light: #f0f0f0;
+            --text-dark: #333;
+            --bg-gradient: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+        }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: #e9e9e9;
             min-height: 100vh;
-            color: white;
             display: flex;
             align-items: center;
             justify-content: center;
             padding: 20px;
         }
-        .auth-container {
-            background: rgba(255,255,255,0.1);
-            padding: 40px;
-            border-radius: 20px;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255,255,255,0.2);
+        .auth-wrapper {
             width: 100%;
-            max-width: 450px;
-            box-shadow: 0 25px 50px rgba(0,0,0,0.2);
+            max-width: 800px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.1);
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            overflow: hidden;
         }
-        .auth-header { text-align: center; margin-bottom: 30px; }
-        .auth-header h1 { font-size: 2.5rem; text-shadow: 0 4px 8px rgba(0,0,0,0.3); }
-        .auth-tabs { display: flex; margin-bottom: 30px; background: rgba(0,0,0,0.2); border-radius: 50px; }
+        .info-panel {
+            background: var(--bg-gradient);
+            color: var(--text-light);
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        .info-panel h1 { font-size: 2.5rem; margin-bottom: 15px; }
+        .info-panel p { font-size: 1.1rem; line-height: 1.6; opacity: 0.9; }
+        .info-panel .features { list-style: none; margin-top: 30px; }
+        .info-panel .features li { margin-bottom: 15px; display: flex; align-items: center; }
+        .info-panel .features i { margin-right: 15px; font-size: 1.2rem; width: 30px; text-align: center; }
+        .form-panel { padding: 40px; }
+        .brand-name { font-size: 1.5rem; font-weight: bold; color: var(--primary-color); text-align: center; margin-bottom: 20px; }
+        .auth-tabs { display: flex; border: 2px solid #eee; border-radius: 50px; margin-bottom: 30px; }
         .auth-tab {
-            flex: 1;
-            padding: 15px;
-            background: transparent;
-            border: none;
-            color: rgba(255,255,255,0.7);
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
+            flex: 1; padding: 12px; background: transparent; border: none; font-size: 1rem;
+            font-weight: 600; color: #aaa; cursor: pointer; transition: all 0.3s ease;
         }
         .auth-tab.active {
-            background: white;
-            color: #4361ee;
-            border-radius: 50px;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            background: var(--primary-color); color: white; border-radius: 50px;
+            box-shadow: 0 5px 15px rgba(106, 17, 203, 0.3);
         }
         .auth-form { display: none; }
-        .auth-form.active { display: block; }
-        .form-group { margin-bottom: 25px; }
-        .form-group label { display: block; margin-bottom: 8px; font-weight: 600; opacity: 0.9; }
+        .auth-form.active { display: block; animation: fadeIn 0.5s; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .form-group { margin-bottom: 20px; }
         .form-group input {
-            width: 100%;
-            padding: 15px;
-            border: 2px solid rgba(255,255,255,0.3);
-            border-radius: 10px;
-            background: rgba(255,255,255,0.1);
-            color: white;
-            font-size: 1rem;
-            transition: all 0.3s ease;
+            width: 100%; padding: 14px; border: 2px solid #eee; border-radius: 10px;
+            font-size: 1rem; transition: all 0.3s ease;
         }
-        .form-group input:focus {
-            outline: none;
-            border-color: rgba(255,255,255,0.6);
-            background: rgba(255,255,255,0.15);
-        }
-        .form-group input::placeholder { color: rgba(255,255,255,0.7); }
+        .form-group input:focus { outline: none; border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(106,17,203,0.1); }
         .btn-primary {
-            width: 100%; padding: 15px; border: none; border-radius: 50px;
-            background: linear-gradient(45deg, #ff6b6b, #ff8e53);
-            color: white; font-size: 1.1rem; font-weight: 600; cursor: pointer;
-            transition: all 0.3s ease;
+            width: 100%; padding: 15px; border: none; border-radius: 10px; background: var(--bg-gradient);
+            color: white; font-size: 1.1rem; font-weight: 600; cursor: pointer; transition: all 0.3s ease;
         }
-        .btn-primary:hover:not(:disabled) { transform: translateY(-3px); box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
-        .btn-primary:disabled { opacity: 0.7; cursor: not-allowed; }
-        .message {
-            padding: 15px; border-radius: 10px; margin-bottom: 20px; text-align: center;
-            font-weight: 600; display: none;
-        }
-        .success-message { background: rgba(46, 204, 113, 0.2); border: 1px solid rgba(46, 204, 113, 0.3); color: #2ecc71; }
-        .error-message { background: rgba(231, 76, 60, 0.2); border: 1px solid rgba(231, 76, 60, 0.3); color: #e74c3c; }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
+        .message { padding: 12px; border-radius: 8px; margin-bottom: 20px; text-align: center; font-weight: 600; display: none; }
+        .success-message { background: #e9f9ee; color: #28a745; }
+        .error-message { background: #fbe9e7; color: #dd2c00; }
+
         @media (max-width: 768px) {
-            .auth-container { padding: 30px 20px; margin: 10px; }
-            .auth-header h1 { font-size: 2rem; }
+            .auth-wrapper { grid-template-columns: 1fr; }
+            .info-panel { display: none; }
+            .form-panel { padding: 30px 20px; }
         }
     </style>
 </head>
 <body>
-    <div class="auth-container">
-        <div class="auth-header">
-            <h1>🔥 BrandOtp</h1>
+    <div class="auth-wrapper">
+        <div class="info-panel">
+            <h1>Welcome to BrandOtp</h1>
+            <p>Your instant gateway to global verification.</p>
+            <ul class="features">
+                <li><i class="fas fa-globe-americas"></i> OTP for 200+ countries</li>
+                <li><i class="fab fa-whatsapp"></i> Top services like WhatsApp, FB, Insta</li>
+                <li><i class="fas fa-bolt"></i> Instant number delivery</li>
+                <li><i class="fas fa-shield-alt"></i> Secure and reliable</li>
+            </ul>
         </div>
-        <div class="auth-tabs">
-            <button class="auth-tab active" data-tab="login">Login</button>
-            <button class="auth-tab" data-tab="signup">Sign Up</button>
+        <div class="form-panel">
+            <div class="brand-name">BRANDOTP</div>
+            <div class="auth-tabs">
+                <button class="auth-tab active" data-tab="login">Login</button>
+                <button class="auth-tab" data-tab="signup">Create Account</button>
+            </div>
+            
+            <div id="messageContainer" class="message"></div>
+
+            <!-- Login Form -->
+            <form id="login-form" class="auth-form active">
+                <div class="form-group">
+                    <input type="email" id="login-email" placeholder="Email Address" required>
+                </div>
+                <div class="form-group">
+                    <input type="password" id="login-password" placeholder="Password" required>
+                </div>
+                <button type="submit" class="btn-primary">Login</button>
+            </form>
+
+            <!-- Sign Up Form -->
+            <form id="signup-form" class="auth-form">
+                <div class="form-group">
+                    <input type="text" id="signup-username" placeholder="Username" required>
+                </div>
+                <div class="form-group">
+                    <input type="email" id="signup-email" placeholder="Email Address" required>
+                </div>
+                <div class="form-group">
+                    <input type="password" id="signup-password" placeholder="Password (min 6 chars)" required>
+                </div>
+                <button type="submit" class="btn-primary">Create Account</button>
+            </form>
         </div>
-        
-        <div id="messageContainer" class="message"></div>
-
-        <!-- Login Form -->
-        <form id="login-form" class="auth-form active">
-            <div class="form-group">
-                <label for="login-email">Email Address</label>
-                <input type="email" id="login-email" placeholder="Enter your email" required>
-            </div>
-            <div class="form-group">
-                <label for="login-password">Password</label>
-                <input type="password" id="login-password" placeholder="Enter your password" required>
-            </div>
-            <button type="submit" class="btn-primary">Login</button>
-        </form>
-
-        <!-- Sign Up Form -->
-        <form id="signup-form" class="auth-form">
-            <div class="form-group">
-                <label for="signup-username">Username</label>
-                <input type="text" id="signup-username" placeholder="Choose a username" required>
-            </div>
-            <div class="form-group">
-                <label for="signup-email">Email Address</label>
-                <input type="email" id="signup-email" placeholder="Enter your email" required>
-            </div>
-            <div class="form-group">
-                <label for="signup-password">Password</label>
-                <input type="password" id="signup-password" placeholder="Create a password (min 6 chars)" required>
-            </div>
-            <button type="submit" class="btn-primary">Create Account</button>
-        </form>
     </div>
 
     <script src="assets/js/auth.js"></script>
