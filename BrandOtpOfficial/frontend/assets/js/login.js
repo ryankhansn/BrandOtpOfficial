@@ -1,6 +1,5 @@
-// frontend/assets/js/login.js - FINAL CORRECTED VERSION
+// frontend/assets/js/login.js - DEBUGGING VERSION
 
-// API Configuration - अब इसका उपयोग किया जाएगा
 const API_BASE_URL = window.API_BASE_URL || 'https://brandotpofficial.onrender.com';
 console.log('🔐 Login API is set to:', API_BASE_URL);
 
@@ -25,23 +24,37 @@ document.addEventListener('DOMContentLoaded', () => {
             formData.append('username', email);
             formData.append('password', password);
 
-            // --- ✅ मुख्य सुधार: API_BASE_URL का उपयोग ---
             const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: formData
             });
-            // ------------------------------------------
 
             const result = await response.json();
 
             if (!response.ok) {
-                throw new Error(result.detail || 'Login failed. Please check credentials.');
+                throw new Error(result.detail || 'Login failed.');
             }
 
             if (result.access_token) {
+                // --- ✅ डीबगिंग शुरू ---
+                console.log('--- LOGIN DEBUGGING ---');
+                console.log('Server sent this access_token:', result.access_token);
+                
                 // टोकन को 'token' नाम से localStorage में सेव करें
                 localStorage.setItem('token', result.access_token);
+                
+                // तुरंत वापस पढ़ें और देखें कि क्या यह सेव हुआ
+                const savedToken = localStorage.getItem('token');
+                console.log('Value read back from localStorage:', savedToken);
+                
+                if (savedToken) {
+                    console.log('✅ SUCCESS: Token was set in localStorage.');
+                } else {
+                    console.error('❌ CRITICAL ERROR: FAILED to set token in localStorage!');
+                }
+                console.log('--------------------');
+                // --- डीबगिंग खत्म ---
                 
                 messageDiv.className = 'message success-message';
                 messageDiv.textContent = '🎉 Login successful! Redirecting...';
@@ -49,7 +62,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 setTimeout(() => {
                     window.location.href = 'dashboard.html';
-                }, 1000);
+                }, 1500);
 
             } else {
                 throw new Error('Token not found in server response.');
@@ -66,4 +79,3 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 });
-
