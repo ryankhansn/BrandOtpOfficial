@@ -1,79 +1,78 @@
-// frontend/assets/js/add_money.js
+document.addEventListener('DOMContentLoaded', () => {
+    // फॉर्म और अन्य एलिमेंट्स को चुनें
+    const addMoneyForm = document.querySelector('form'); // फॉर्म को चुनें, उसे कोई ID देने की ज़रूरत नहीं
+    const amountInput = document.getElementById('amount');
+    const messageDiv = document.getElementById('message');
+    const submitButton = addMoneyForm.querySelector('button[type="submit"]');
 
-const API_BASE_URL = window.API_BASE_URL || 'https://brandotpofficial.onrender.com';
-
-const form = document.getElementById("addMoneyForm");
-const amountInput = document.getElementById("amount");
-// मोबाइल नंबर की अब हमें फ्रंटएंड से ज़रूरत नहीं है, क्योंकि हम इसे लॉग-इन यूजर से लेंगे।
-// const mobileInput = document.getElementById("mobile_number"); 
-const msgBox = document.getElementById("message");
-const btn = document.getElementById("addMoneyBtn");
-
-function setAmount(v) {
-  amountInput.value = v;
-  amountInput.focus();
-}
-
-function showMessage(text, type) {
-  msgBox.textContent = text;
-  msgBox.className = `message ${type}`;
-  msgBox.style.display = "block";
-}
-
-function clearMessage() {
-  msgBox.style.display = "none";
-}
-
-form.addEventListener("submit", async e => {
-  e.preventDefault();
-  clearMessage();
-  btn.disabled = true;
-  btn.textContent = "Processing..."; // बटन का टेक्स्ट बदलें
-
-  try {
-    // --- ✅ मुख्य बदलाव: लोकल स्टोरेज से टोकन प्राप्त करें ---
-    const token = localStorage.getItem('token');
-    if (!token) {
-      // अगर यूजर लॉग-इन नहीं है, तो उसे बताएं
-      throw new Error("You are not authenticated. Please log in again.");
+    // संदेश दिखाने के लिए एक फंक्शन
+    function showMessage(text, type = 'error') {
+        if (messageDiv) {
+            messageDiv.textContent = text;
+            messageDiv.className = `message ${type}`;
+            messageDiv.style.display = 'block';
+        }
     }
-    // ------------------------------------------------------
 
-    const amt = parseFloat(amountInput.value);
-    if (isNaN(amt) || amt < 50 || amt > 5000) {
-      throw new Error("Please enter an amount between ₹50 and ₹5,000.");
-    }
-    
-    // अब हमें फ्रंटएंड से मोबाइल नंबर भेजने की ज़रूरत नहीं है।
+    // फॉर्म सबमिट होने पर यह फंक्शन चलेगा
+    addMoneyForm.addEventListener('submit', async (event) => {
+        event.preventDefault(); // पेज को रीलोड होने से रोकें
 
-    const res = await fetch(`${API_BASE_URL}/api/payments/pay0/create-order`, {
-      method: "POST",
-      headers: { 
-        "Content-Type": "application/json",
-        // --- ✅ मुख्य बदलाव: Authorization हेडर भेजें ---
-        "Authorization": `Bearer ${token}`
-      },
-      // बॉडी में अब सिर्फ amount भेजें
-      body: JSON.stringify({ amount: amt })
+        // बटन को डिसेबल करें और टेक्स्ट बदलें
+        submitButton.disabled = true;
+        submitButton.textContent = 'Processing...';
+        if(messageDiv) messageDiv.style.display = 'none';
+
+        // 1. localStorage से टोकन प्राप्त करें
+        const token = localStorage.getItem('token');
+
+        // 2. अगर टोकन नहीं है, तो एरर दिखाएँ
+        if (!token) {
+            showMessage('You are not authenticated. Please log in again.');
+            submitButton.disabled = false;
+            submitButton.textContent = 'Proceed to Pay0';
+            return;
+        }
+
+        const amount = parseFloat(amountInput.value);
+
+        // 3. रकम की जाँच करें
+        if (isNaN(amount) || amount < 50 || amount > 5000) {
+            showMessage('Please enter an amount between ₹50 and ₹5,000.');
+            submitButton.disabled = false;
+            submitButton.textContent = 'Proceed to Pay0';
+            return;
+        }
+
+        try {
+            // 4. बैकएंड को टोकन के साथ रिक्वेस्ट भेजें
+            const response = await fetch('https://brandotpofficial.onrender.com/api/payments/pay0/create-order', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}` // यह सबसे महत्वपूर्ण लाइन है
+                },
+                body: JSON.stringify({ amount: amount })
+            });
+
+            const result = await response.json();
+
+            // 5. अगर रिक्वेस्ट सफल नहीं हुई, तो एरर दिखाएँ
+            if (!response.ok) {
+                throw new Error(result.detail || 'Failed to create order.');
+            }
+
+            // 6. अगर पेमेंट URL मिला है, तो उस पर भेज दें
+            if (result.payment_url) {
+                window.location.href = result.payment_url;
+            } else {
+                throw new Error('Payment URL not received from server.');
+            }
+
+        } catch (error) {
+            showMessage(error.message);
+            submitButton.disabled = false;
+            submitButton.textContent = 'Proceed to Pay0';
+        }
     });
-
-    const result = await res.json();
-    
-    if (!res.ok) {
-      throw new Error(result.detail || "Failed to create payment order.");
-    }
-
-    if (!result.payment_url || typeof result.payment_url !== "string") {
-      throw new Error("Server did not return a valid payment link!");
-    }
-    
-    // यूजर को Pay0 के पेमेंट पेज पर भेजें
-    window.location.href = result.payment_url;
-
-  } catch (err) {
-    showMessage(err.message || "An error occurred during payment.", "error");
-    btn.disabled = false; // एरर आने पर बटन को फिर से इनेबल करें
-    btn.textContent = "Proceed to Pay0"; // बटन का टेक्स्ट वापस सेट करें
-  }
-  // `finally` ब्लॉक को यहाँ से हटा दिया गया है ताकि सफल होने पर बटन डिसेबल रहे
 });
