@@ -23,7 +23,7 @@ body{background:var(--bg-grad);min-height:100vh;display:flex;flex-direction:colu
 .card-title{font-size:1.5rem;text-align:center;margin-bottom:26px}
 .form-group{margin-bottom:22px}
 label{display:block;font-weight:600;margin-bottom:6px}
-input[type=number]{width:100%;padding:14px;border:2px solid #e1e5e9;border-radius:12px;font-size:1rem;transition:border var(--speed)}
+input[type=number],input[type=tel]{width:100%;padding:14px;border:2px solid #e1e5e9;border-radius:12px;font-size:1rem;transition:border var(--speed)}
 input:focus{outline:none;border-color:var(--brand-1);box-shadow:0 0 0 3px rgba(67,97,238,.12)}
 .submit-btn{width:100%;padding:16px;font-size:1.1rem;font-weight:600;color:#fff;background:linear-gradient(135deg,var(--brand-1) 0%,var(--brand-2) 100%);border:none;border-radius:12px;cursor:pointer;box-shadow:0 6px 16px rgba(67,97,238,.3);transition:transform var(--speed)}
 .submit-btn:hover{transform:translateY(-3px)}
@@ -51,16 +51,21 @@ input:focus{outline:none;border-color:var(--brand-1);box-shadow:0 0 0 3px rgba(6
     <form id="addMoneyForm" autocomplete="off">
       <div class="form-group">
         <label for="amount">Amount (₹50–₹5,000)</label>
-        <input id="amount" type="number" min="50" max="5000" required>
+        <input id="amount" type="number" min="50" max="5000" placeholder="Enter amount" required>
       </div>
       
-      <!-- मोबाइल नंबर का सेक्शन हटा दिया गया है -->
+      <!-- ✅ मोबाइल नंबर का नया फील्ड -->
+      <div class="form-group">
+        <label for="mobile">Mobile Number</label>
+        <input id="mobile" type="tel" placeholder="Enter your 10-digit mobile number" required>
+      </div>
 
       <button id="addMoneyBtn" class="submit-btn" type="submit">💳 Proceed to Pay0</button>
     </form>
   </section>
 </main>
 
+<!-- ✅ जावास्क्रिप्ट फ़ाइल का लिंक -->
 <script src="assets/js/add_money.js"></script>
 
 </body>
