@@ -1,4 +1,4 @@
-// frontend/assets/js/auth.js - FINAL & CORRECTED VERSION
+// frontend/assets/js/auth.js - COMPLETE FIXED VERSION
 
 const API_BASE_URL = window.API_BASE_URL || 'https://brandotpofficial.onrender.com';
 console.log('🔐 Auth System Initialized. API:', API_BASE_URL);
@@ -8,7 +8,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const signupForm = document.getElementById("signup-form");
     const messageContainer = document.getElementById("messageContainer");
 
-    // Tab switching logic (यह सही है, इसे न बदलें)
+    // ✅ Tab switching logic
     document.querySelectorAll(".auth-tab").forEach(tab => {
         tab.addEventListener("click", () => {
             document.querySelectorAll(".auth-tab").forEach(t => t.classList.remove("active"));
@@ -19,6 +19,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
+    // If URL has #signup, switch to signup tab
     if (window.location.hash === '#signup') {
         document.querySelector('.auth-tab[data-tab="signup"]').click();
     }
@@ -30,7 +31,7 @@ document.addEventListener("DOMContentLoaded", () => {
         messageContainer.style.display = 'block';
     }
 
-    // ===== LOGIN LOGIC - FIXED! =====
+    // ===== ✅ LOGIN LOGIC - FULLY FIXED! =====
     if (loginForm) {
         loginForm.addEventListener("submit", async (e) => {
             e.preventDefault();
@@ -38,28 +39,47 @@ document.addEventListener("DOMContentLoaded", () => {
             const password = document.getElementById("login-password").value.trim();
             const button = loginForm.querySelector('button');
             button.disabled = true;
+            button.textContent = 'Logging in...';
 
             try {
-                // ✅ FIX 1: Sending data as JSON, as required by your API docs
-                const res = await fetch(`${API_BASE_URL}/api/auth/login`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ email: email, password: password })
-                });
-                const data = await res.json();
-                if (!res.ok) throw new Error(data.detail || "Login failed");
+                // ✅ FIX 1: FastAPI /auth/login expects FORM DATA (application/x-www-form-urlencoded)
+                const formData = new URLSearchParams();
+                formData.append('username', email);  // OAuth2 standard uses 'username' field
+                formData.append('password', password);
                 
+                const res = await fetch(`${API_BASE_URL}/auth/login`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                    body: formData
+                });
+
+                const data = await res.json();
+                
+                if (!res.ok) {
+                    throw new Error(data.detail || "Login failed");
+                }
+                
+                // ✅ FIX 2: Save token properly
                 localStorage.setItem("token", data.access_token);
-                showMessage("✅ Login successful! Redirecting...", 'success');
-                setTimeout(() => window.location.href = "dashboard.html", 1000);
+                localStorage.setItem("username", email);
+                
+                showMessage("✅ Login successful! Redirecting to dashboard...", 'success');
+                
+                // ✅ FIX 3: Redirect after 1 second to dashboard
+                setTimeout(() => {
+                    window.location.href = "/dashboard.html";
+                }, 1000);
+                
             } catch (err) {
+                console.error('❌ Login Error:', err);
                 showMessage(`⚠️ ${err.message}`, 'error');
                 button.disabled = false;
+                button.textContent = 'Login';
             }
         });
     }
 
-    // ===== SIGNUP LOGIC - FIXED! =====
+    // ===== ✅ SIGNUP LOGIC - FULLY FIXED! =====
     if (signupForm) {
         signupForm.addEventListener("submit", async (e) => {
             e.preventDefault();
@@ -68,28 +88,46 @@ document.addEventListener("DOMContentLoaded", () => {
             const password = document.getElementById("signup-password").value.trim();
             const button = signupForm.querySelector('button');
             button.disabled = true;
+            button.textContent = 'Creating account...';
 
-            if (password.length < 4) { // आपके डॉक्स के अनुसार min 4 है
-                showMessage('Password must be at least 4 characters.', 'error');
+            // Basic validation
+            if (password.length < 6) {
+                showMessage('⚠️ Password must be at least 6 characters.', 'error');
                 button.disabled = false;
+                button.textContent = 'Create Account';
                 return;
             }
 
             try {
-                // ✅ FIX 2: Using the correct signup URL from your API docs
-                const res = await fetch(`${API_BASE_URL}/api/auth/signup`, {
+                // ✅ Signup endpoint expects JSON
+                const res = await fetch(`${API_BASE_URL}/auth/signup`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ username, email, password })
                 });
-                const data = await res.json();
-                if (!res.ok) throw new Error(data.detail || "Signup failed");
 
-                showMessage("✅ Signup successful! Please login now.", 'success');
+                const data = await res.json();
+                
+                if (!res.ok) {
+                    throw new Error(data.detail || "Signup failed");
+                }
+
+                // ✅ FIX 4: After signup, switch to login tab and show success message
+                showMessage("✅ Account created successfully! Please login now.", 'success');
+                
+                // Switch to login tab after 1.5 seconds
+                setTimeout(() => {
+                    document.querySelector('.auth-tab[data-tab="login"]').click();
+                    document.getElementById("login-email").value = email;
+                    messageContainer.style.display = 'none';
+                }, 1500);
+                
             } catch (err) {
+                console.error('❌ Signup Error:', err);
                 showMessage(`⚠️ ${err.message}`, 'error');
             } finally {
                 button.disabled = false;
+                button.textContent = 'Create Account';
             }
         });
     }
