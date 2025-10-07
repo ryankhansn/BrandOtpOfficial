@@ -1,19 +1,18 @@
 // frontend/assets/js/add_money.js - FINAL WORKING VERSION
 
-const API_BASE_URL = window.API_BASE_URL || 'https://brandotpofficial.onrender.com';
-
 document.addEventListener('DOMContentLoaded', () => {
-    const addMoneyForm = document.querySelector('form');
+    const addMoneyForm = document.getElementById('addMoneyForm');
     if (!addMoneyForm) return;
 
     const amountInput = document.getElementById('amount');
+    const mobileInput = document.getElementById('mobile'); // मोबाइल इनपुट
     const messageDiv = document.getElementById('message');
-    const submitButton = addMoneyForm.querySelector('button[type="submit"]');
+    const submitButton = document.getElementById('addMoneyBtn');
 
     function showMessage(text, type = 'error') {
         if (messageDiv) {
             messageDiv.textContent = text;
-            messageDiv.className = `message ${type}-message`;
+            messageDiv.className = `message ${type}`;
             messageDiv.style.display = 'block';
         }
     }
@@ -25,9 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
         submitButton.textContent = 'Processing...';
         if (messageDiv) messageDiv.style.display = 'none';
 
-        // 1. localStorage से 'token' नाम से टोकन प्राप्त करें
         const token = localStorage.getItem('token');
-
         if (!token) {
             showMessage('You are not authenticated. Please log in again.');
             submitButton.disabled = false;
@@ -36,6 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const amount = parseFloat(amountInput.value);
+        const mobile = mobileInput.value;
 
         if (isNaN(amount) || amount < 50 || amount > 5000) {
             showMessage('Please enter an amount between ₹50 and ₹5,000.');
@@ -44,15 +42,24 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        if (!/^\d{10}$/.test(mobile)) {
+            showMessage('Please enter a valid 10-digit mobile number.');
+            submitButton.disabled = false;
+            submitButton.textContent = 'Proceed to Pay0';
+            return;
+        }
+
         try {
-            // 2. बैकएंड को टोकन के साथ रिक्वेस्ट भेजें
-            const response = await fetch(`${API_BASE_URL}/api/payments/pay0/create-order`, {
+            const response = await fetch(`/api/payments/pay0/create-order`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 },
-                body: JSON.stringify({ amount: amount })
+                body: JSON.stringify({
+                    amount: amount,
+                    customer_mobile: mobile // ✅ मोबाइल नंबर भेजा जा रहा है
+                })
             });
 
             const result = await response.json();
