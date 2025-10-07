@@ -61,7 +61,7 @@ app.add_middleware(
     allow_origins=[
         "https://brandotpofficial.shop",
         "https://www.brandotpofficial.shop",
-        "https://comforting-lollipop-46698c.netlify.app",
+        "https://brandotpofficial.netlify.app/",
         "http://localhost:8000",
         "http://127.0.0.1:5500",
     ],
@@ -656,5 +656,6 @@ if __name__ == "__main__":
         reload=False,
         log_level="info"
     )
+
 
 
