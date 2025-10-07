@@ -55,21 +55,23 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
-# CORS Middleware
+# main.py - CORS Middleware Update
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "https://brandotpofficial.shop",
         "https://www.brandotpofficial.shop",
-        "https://brandotpofficials.netlify.app/",
+        "https://brandotpofficials.netlify.app",  # ✅ No trailing slash!
         "http://localhost:8000",
         "http://127.0.0.1:5500",
+        "http://localhost:5500",  # ✅ Add this too
     ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
     expose_headers=["*"]
 )
+
 
 # Database initialization
 def init_database():
@@ -656,6 +658,7 @@ if __name__ == "__main__":
         reload=False,
         log_level="info"
     )
+
 
 
 
