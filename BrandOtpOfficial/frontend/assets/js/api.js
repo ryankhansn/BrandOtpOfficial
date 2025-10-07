@@ -1,3 +1,5 @@
+// frontend/assets/js/api.js - COMPLETE FIXED VERSION
+
 const API_BASE_URL = 'https://brandotpofficial.onrender.com';
 
 async function apiRequest(endpoint, method = 'GET', data = null, token = null) {
@@ -19,20 +21,16 @@ async function apiRequest(endpoint, method = 'GET', data = null, token = null) {
     return result;
 }
 
-// ✅ MAIN API FUNCTIONS
+// ✅ MAIN API FUNCTIONS - ALL FIXED WITH /api PREFIX!
 const api = {
-    // ✅ FIXED Authentication
+    // ✅ FIXED Authentication - Added /api prefix
     auth: {
         login: async (email, password) => {
-            // ✅ FastAPI expects form-data for OAuth2 login
-            const formData = new URLSearchParams();
-            formData.append('username', email);
-            formData.append('password', password);
-            
-            const response = await fetch(`${API_BASE_URL}/auth/login`, {
+            // ✅ FIX: Backend expects JSON at /api/auth/login
+            const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: formData
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password })
             });
             
             const data = await response.json();
@@ -46,7 +44,8 @@ const api = {
         },
         
         signup: async (username, email, password) => {
-            const response = await fetch(`${API_BASE_URL}/auth/signup`, {
+            // ✅ FIX: Backend expects JSON at /api/auth/signup
+            const response = await fetch(`${API_BASE_URL}/api/auth/signup`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ username, email, password })
@@ -60,7 +59,8 @@ const api = {
         
         getProfile: async () => {
             const token = localStorage.getItem('token');
-            return apiRequest('/auth/me', 'GET', null, token);
+            // ✅ FIX: Added /api prefix
+            return apiRequest('/api/auth/me', 'GET', null, token);
         },
         
         logout: () => {
@@ -70,11 +70,12 @@ const api = {
         }
     },
     
-    // ✅ Wallet Operations (YE SAB SAME RAHEGA - NO CHANGES)
+    // ✅ Wallet Operations - Added /api prefix
     wallet: {
         getBalance: async () => {
             const token = localStorage.getItem('token');
-            return apiRequest('/wallet/balance', 'GET', null, token);
+            // ✅ FIX: Added /api prefix
+            return apiRequest('/api/wallet/balance', 'GET', null, token);
         },
         
         addMoney: async (amount) => {
@@ -83,7 +84,8 @@ const api = {
             formData.append('amount', amount);
             formData.append('payment_method', 'manual');
             
-            const response = await fetch(`${API_BASE_URL}/wallet/add-money`, {
+            // ✅ FIX: Added /api prefix
+            const response = await fetch(`${API_BASE_URL}/api/wallet/add-money`, {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${token}` },
                 body: formData
@@ -96,29 +98,34 @@ const api = {
         
         getTransactions: async () => {
             const token = localStorage.getItem('token');
-            return apiRequest('/wallet/transactions', 'GET', null, token);
+            // ✅ FIX: Added /api prefix
+            return apiRequest('/api/wallet/transactions', 'GET', null, token);
         }
     },
     
-    // ✅ SMSMan Services (YE SAB SAME RAHEGA - NO CHANGES)
+    // ✅ SMSMan Services - Added /api prefix
     smsman: {
         getServices: async () => {
-            const data = await apiRequest('/smsman/services');
+            // ✅ FIX: Added /api prefix
+            const data = await apiRequest('/api/smsman/services');
             console.log('✅ Services loaded:', data.services);
             return data.services || [];
         },
         
         getMeta: async () => {
-            return apiRequest('/smsman/meta');
+            // ✅ FIX: Added /api prefix
+            return apiRequest('/api/smsman/meta');
         },
         
         getPrice: async (applicationId, countryId) => {
-            return apiRequest(`/smsman/price/${applicationId}/${countryId}`);
+            // ✅ FIX: Added /api prefix
+            return apiRequest(`/api/smsman/price/${applicationId}/${countryId}`);
         },
         
         buyNumber: async (applicationId, countryId) => {
             const token = localStorage.getItem('token');
-            return apiRequest('/smsman/buy', 'POST', {
+            // ✅ FIX: Added /api prefix
+            return apiRequest('/api/smsman/buy', 'POST', {
                 application_id: applicationId,
                 country_id: countryId
             }, token);
@@ -126,16 +133,18 @@ const api = {
         
         getSMS: async (requestId) => {
             const token = localStorage.getItem('token');
-            return apiRequest(`/smsman/sms/${requestId}`, 'GET', null, token);
+            // ✅ FIX: Added /api prefix
+            return apiRequest(`/api/smsman/sms/${requestId}`, 'GET', null, token);
         },
         
         cancel: async (requestId) => {
             const token = localStorage.getItem('token');
-            return apiRequest(`/smsman/cancel/${requestId}`, 'POST', null, token);
+            // ✅ FIX: Added /api prefix
+            return apiRequest(`/api/smsman/cancel/${requestId}`, 'POST', null, token);
         }
     },
     
-    // ✅ Pricing Helpers (SAME - NO CHANGES)
+    // ✅ Pricing Helpers (NO CHANGES)
     pricing: {
         formatPrice: (price) => `₹${Number(price).toFixed(2)}`,
         
@@ -148,7 +157,7 @@ const api = {
         }
     },
     
-    // ✅ Complete Purchase Flow (SAME - NO CHANGES)
+    // ✅ Complete Purchase Flow (NO CHANGES - uses api.smsman internally)
     purchase: {
         buyService: async (serviceId, countryId = 91) => {
             try {
@@ -178,7 +187,7 @@ const api = {
     }
 };
 
-// ✅ UI HELPERS (SAME - NO CHANGES)
+// ✅ UI HELPERS (NO CHANGES)
 async function loadServicesWithPrices() {
     try {
         const services = await api.smsman.getServices();
