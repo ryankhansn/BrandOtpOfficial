@@ -1,4 +1,4 @@
-// frontend/assets/js/auth.js - FINAL WORKING VERSION
+// frontend/assets/js/auth.js - COMPLETE FIXED VERSION
 
 const API_BASE_URL = window.API_BASE_URL || 'https://brandotpofficial.onrender.com';
 console.log('🔐 Auth System Initialized. API:', API_BASE_URL);
@@ -30,7 +30,7 @@ document.addEventListener("DOMContentLoaded", () => {
         messageContainer.style.display = 'block';
     }
 
-    // ===== ✅ LOGIN - FIXED FOR YOUR BACKEND! =====
+    // ===== ✅ LOGIN - COMPLETE FIXED! =====
     if (loginForm) {
         loginForm.addEventListener("submit", async (e) => {
             e.preventDefault();
@@ -43,8 +43,8 @@ document.addEventListener("DOMContentLoaded", () => {
             try {
                 console.log('🔐 Login attempt:', email);
 
-                // ✅ FIX: Your backend /auth/login expects JSON (UserLogin model)
-                const res = await fetch(`${API_BASE_URL}/auth/login`, {
+                // ✅ FIX: Add /api prefix - Backend route is /api/auth/login
+                const res = await fetch(`${API_BASE_URL}/api/auth/login`, {
                     method: "POST",
                     headers: { 
                         "Content-Type": "application/json",
@@ -87,7 +87,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // ===== ✅ SIGNUP - ALREADY CORRECT! =====
+    // ===== ✅ SIGNUP - COMPLETE FIXED! =====
     if (signupForm) {
         signupForm.addEventListener("submit", async (e) => {
             e.preventDefault();
@@ -108,8 +108,8 @@ document.addEventListener("DOMContentLoaded", () => {
             try {
                 console.log('📝 Signup attempt:', email);
 
-                // ✅ Signup expects JSON (UserSignup model)
-                const res = await fetch(`${API_BASE_URL}/auth/signup`, {
+                // ✅ FIX: Add /api prefix - Backend route is /api/auth/signup
+                const res = await fetch(`${API_BASE_URL}/api/auth/signup`, {
                     method: "POST",
                     headers: { 
                         "Content-Type": "application/json",
