@@ -1,0 +1,23 @@
+# Netlify Redirects Configuration for BrandOtp
+
+# Login & Signup routes → auth.html
+/login              /auth.html              200
+/signup             /auth.html#signup       200
+
+# Dashboard route → dashboard.html  
+/dashboard          /dashboard.html         200
+
+# Wallet route → wallet.html (if you have it)
+/wallet             /wallet.html            200
+
+# Buy number route → buy_number.html (if you have it)
+/buy-number         /buy_number.html        200
+
+# add money route → buy_number.html (if you have it)
+/add-money         /add_money.html        200
+
+# History route → history.html (if you have it)
+/history            /history.html           200
+
+# SPA fallback - All other routes → index.html
+/*                  /index.html             200
