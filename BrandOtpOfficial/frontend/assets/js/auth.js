@@ -1,4 +1,4 @@
-// frontend/assets/js/auth.js - COMPLETE FIXED VERSION
+// frontend/assets/js/auth.js - FINAL VERSION WITH SIGNUP→LOGIN REDIRECT
 
 const API_BASE_URL = window.API_BASE_URL || 'https://brandotpofficial.onrender.com';
 console.log('🔐 Auth System Initialized. API:', API_BASE_URL);
@@ -19,6 +19,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
+    // ✅ Check URL hash for signup tab
     if (window.location.hash === '#signup') {
         document.querySelector('.auth-tab[data-tab="signup"]').click();
     }
@@ -43,17 +44,14 @@ document.addEventListener("DOMContentLoaded", () => {
             try {
                 console.log('🔐 Login attempt:', email);
 
-                // ✅ FIX: Add /api prefix - Backend route is /api/auth/login
+                // ✅ Backend API call with /api prefix
                 const res = await fetch(`${API_BASE_URL}/api/auth/login`, {
                     method: "POST",
                     headers: { 
                         "Content-Type": "application/json",
                         "Accept": "application/json"
                     },
-                    body: JSON.stringify({ 
-                        email: email, 
-                        password: password 
-                    })
+                    body: JSON.stringify({ email, password })
                 });
 
                 const data = await res.json();
@@ -63,17 +61,17 @@ document.addEventListener("DOMContentLoaded", () => {
                     throw new Error(data.detail || "Login failed");
                 }
                 
-                // ✅ Token save - Your backend returns 'access_token'
+                // ✅ Save token and user data
                 localStorage.setItem("token", data.access_token);
                 localStorage.setItem("username", data.user.username);
                 localStorage.setItem("email", data.user.email);
                 localStorage.setItem("userId", data.user.id);
                 
-                console.log('✅ Token saved:', data.access_token.substring(0, 20) + '...');
+                console.log('✅ Token saved successfully');
                 
                 showMessage("✅ Login successful! Redirecting to dashboard...", 'success');
                 
-                // ✅ Redirect to dashboard
+                // ✅ Redirect to dashboard (clean URL without .html)
                 setTimeout(() => {
                     window.location.href = "/dashboard";
                 }, 1000);
@@ -87,7 +85,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // ===== ✅ SIGNUP - COMPLETE FIXED! =====
+    // ===== ✅ SIGNUP - FIXED WITH LOGIN REDIRECT! =====
     if (signupForm) {
         signupForm.addEventListener("submit", async (e) => {
             e.preventDefault();
@@ -98,6 +96,7 @@ document.addEventListener("DOMContentLoaded", () => {
             button.disabled = true;
             button.textContent = 'Creating account...';
 
+            // ✅ Password validation
             if (password.length < 4) {
                 showMessage('⚠️ Password must be at least 4 characters.', 'error');
                 button.disabled = false;
@@ -108,7 +107,7 @@ document.addEventListener("DOMContentLoaded", () => {
             try {
                 console.log('📝 Signup attempt:', email);
 
-                // ✅ FIX: Add /api prefix - Backend route is /api/auth/signup
+                // ✅ Backend API call with /api prefix
                 const res = await fetch(`${API_BASE_URL}/api/auth/signup`, {
                     method: "POST",
                     headers: { 
@@ -125,18 +124,17 @@ document.addEventListener("DOMContentLoaded", () => {
                     throw new Error(data.detail || "Signup failed");
                 }
 
-                // ✅ Auto-login after signup with token
-                localStorage.setItem("token", data.access_token);
-                localStorage.setItem("username", data.user.username);
-                localStorage.setItem("email", data.user.email);
-                localStorage.setItem("userId", data.user.id);
-
-                showMessage("✅ Account created! Redirecting to dashboard...", 'success');
+                // ✅ SUCCESS: Show message and switch to login tab
+                showMessage("✅ Account created successfully! Please login to continue.", 'success');
                 
-                // ✅ Redirect to dashboard after signup
+                // ✅ Pre-fill login email field
+                document.getElementById("login-email").value = email;
+                
+                // ✅ Switch to login tab after 2 seconds
                 setTimeout(() => {
-                    window.location.href = "/dashboard";
-                }, 1500);
+                    document.querySelector('.auth-tab[data-tab="login"]').click();
+                    if (messageContainer) messageContainer.style.display = 'none';
+                }, 2000);
                 
             } catch (err) {
                 console.error('❌ Signup Error:', err);
@@ -154,8 +152,8 @@ function isLoggedIn() {
     return localStorage.getItem('token') !== null;
 }
 
-// ✅ Auto-redirect if already logged in
-if (window.location.pathname.includes('auth.html') && isLoggedIn()) {
+// ✅ Auto-redirect if already logged in (when visiting auth page)
+if ((window.location.pathname.includes('auth') || window.location.pathname.includes('login')) && isLoggedIn()) {
     console.log('✅ Already logged in, redirecting to dashboard');
     window.location.href = '/dashboard';
 }
