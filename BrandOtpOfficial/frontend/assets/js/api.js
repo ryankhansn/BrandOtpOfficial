@@ -21,9 +21,10 @@ async function apiRequest(endpoint, method = 'GET', data = null, token = null) {
 
 // ✅ MAIN API FUNCTIONS
 const api = {
-    // Authentication
+    // ✅ FIXED Authentication
     auth: {
         login: async (email, password) => {
+            // ✅ FastAPI expects form-data for OAuth2 login
             const formData = new URLSearchParams();
             formData.append('username', email);
             formData.append('password', password);
@@ -36,6 +37,24 @@ const api = {
             
             const data = await response.json();
             if (!response.ok) throw new Error(data.detail || 'Login failed');
+            
+            // Save token and redirect
+            localStorage.setItem('token', data.access_token);
+            localStorage.setItem('username', email);
+            
+            return data;
+        },
+        
+        signup: async (username, email, password) => {
+            const response = await fetch(`${API_BASE_URL}/auth/signup`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, email, password })
+            });
+            
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.detail || 'Signup failed');
+            
             return data;
         },
         
@@ -47,10 +66,11 @@ const api = {
         logout: () => {
             localStorage.removeItem('token');
             localStorage.removeItem('username');
+            window.location.href = '/auth.html';
         }
     },
     
-    // Wallet Operations
+    // ✅ Wallet Operations (YE SAB SAME RAHEGA - NO CHANGES)
     wallet: {
         getBalance: async () => {
             const token = localStorage.getItem('token');
@@ -80,7 +100,7 @@ const api = {
         }
     },
     
-    // ✅ SMSMan Services (70% Markup)
+    // ✅ SMSMan Services (YE SAB SAME RAHEGA - NO CHANGES)
     smsman: {
         getServices: async () => {
             const data = await apiRequest('/smsman/services');
@@ -115,7 +135,7 @@ const api = {
         }
     },
     
-    // ✅ Pricing Helpers
+    // ✅ Pricing Helpers (SAME - NO CHANGES)
     pricing: {
         formatPrice: (price) => `₹${Number(price).toFixed(2)}`,
         
@@ -128,27 +148,23 @@ const api = {
         }
     },
     
-    // ✅ Complete Purchase Flow
+    // ✅ Complete Purchase Flow (SAME - NO CHANGES)
     purchase: {
         buyService: async (serviceId, countryId = 91) => {
             try {
                 console.log(`🛒 Buying service: ${serviceId}`);
                 
-                // Check balance
                 const balance = await api.wallet.getBalance();
                 console.log(`💰 Balance: ₹${balance.balance}`);
                 
-                // Get price
                 const priceInfo = await api.smsman.getPrice(serviceId, countryId);
                 console.log(`💰 Price: ${api.pricing.formatPrice(priceInfo.user_price)}`);
                 
-                // Check affordability
                 if (!api.pricing.canAfford(balance.balance, priceInfo.user_price)) {
                     const shortage = api.pricing.getShortage(balance.balance, priceInfo.user_price);
                     throw new Error(`Insufficient balance! Need ${api.pricing.formatPrice(shortage)} more`);
                 }
                 
-                // Buy
                 const result = await api.smsman.buyNumber(serviceId, countryId);
                 console.log('✅ Purchase successful:', result);
                 
@@ -162,7 +178,7 @@ const api = {
     }
 };
 
-// ✅ UI HELPERS
+// ✅ UI HELPERS (SAME - NO CHANGES)
 async function loadServicesWithPrices() {
     try {
         const services = await api.smsman.getServices();
@@ -171,7 +187,6 @@ async function loadServicesWithPrices() {
         console.log('✅ Services:', services);
         console.log('✅ Balance:', balance.balance);
         
-        // Display services with prices
         services.forEach(service => {
             console.log(`${service.name}: ${service.display_price}`);
         });
@@ -188,7 +203,6 @@ async function handleBuyClick(serviceId) {
         const result = await api.purchase.buyService(serviceId);
         alert(`✅ Success!\nNumber: ${result.number}\nCharged: ${result.transaction.charged_amount}\nNew Balance: ₹${result.transaction.new_balance}`);
         
-        // Refresh page or update UI
         location.reload();
     } catch (error) {
         alert(`❌ Purchase failed: ${error.message}`);
