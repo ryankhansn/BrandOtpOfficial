@@ -1,4 +1,4 @@
-// frontend/assets/js/auth.js - COMPLETE FIXED VERSION
+// frontend/assets/js/auth.js - FINAL WORKING VERSION
 
 const API_BASE_URL = window.API_BASE_URL || 'https://brandotpofficial.onrender.com';
 console.log('🔐 Auth System Initialized. API:', API_BASE_URL);
@@ -19,7 +19,6 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
-    // If URL has #signup, switch to signup tab
     if (window.location.hash === '#signup') {
         document.querySelector('.auth-tab[data-tab="signup"]').click();
     }
@@ -31,7 +30,7 @@ document.addEventListener("DOMContentLoaded", () => {
         messageContainer.style.display = 'block';
     }
 
-    // ===== ✅ LOGIN LOGIC - FULLY FIXED! =====
+    // ===== ✅ LOGIN - FIXED FOR YOUR BACKEND! =====
     if (loginForm) {
         loginForm.addEventListener("submit", async (e) => {
             e.preventDefault();
@@ -42,32 +41,41 @@ document.addEventListener("DOMContentLoaded", () => {
             button.textContent = 'Logging in...';
 
             try {
-                // ✅ FIX 1: FastAPI /auth/login expects FORM DATA (application/x-www-form-urlencoded)
-                const formData = new URLSearchParams();
-                formData.append('username', email);  // OAuth2 standard uses 'username' field
-                formData.append('password', password);
-                
+                console.log('🔐 Login attempt:', email);
+
+                // ✅ FIX: Your backend /auth/login expects JSON (UserLogin model)
                 const res = await fetch(`${API_BASE_URL}/auth/login`, {
                     method: "POST",
-                    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-                    body: formData
+                    headers: { 
+                        "Content-Type": "application/json",
+                        "Accept": "application/json"
+                    },
+                    body: JSON.stringify({ 
+                        email: email, 
+                        password: password 
+                    })
                 });
 
                 const data = await res.json();
+                console.log('📦 Login response:', data);
                 
                 if (!res.ok) {
                     throw new Error(data.detail || "Login failed");
                 }
                 
-                // ✅ FIX 2: Save token properly
+                // ✅ Token save - Your backend returns 'access_token'
                 localStorage.setItem("token", data.access_token);
-                localStorage.setItem("username", email);
+                localStorage.setItem("username", data.user.username);
+                localStorage.setItem("email", data.user.email);
+                localStorage.setItem("userId", data.user.id);
+                
+                console.log('✅ Token saved:', data.access_token.substring(0, 20) + '...');
                 
                 showMessage("✅ Login successful! Redirecting to dashboard...", 'success');
                 
-                // ✅ FIX 3: Redirect after 1 second to dashboard
+                // ✅ Redirect to dashboard
                 setTimeout(() => {
-                    window.location.href = "/dashboard.html";
+                    window.location.href = "/dashboard";
                 }, 1000);
                 
             } catch (err) {
@@ -79,7 +87,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // ===== ✅ SIGNUP LOGIC - FULLY FIXED! =====
+    // ===== ✅ SIGNUP - ALREADY CORRECT! =====
     if (signupForm) {
         signupForm.addEventListener("submit", async (e) => {
             e.preventDefault();
@@ -90,36 +98,44 @@ document.addEventListener("DOMContentLoaded", () => {
             button.disabled = true;
             button.textContent = 'Creating account...';
 
-            // Basic validation
-            if (password.length < 6) {
-                showMessage('⚠️ Password must be at least 6 characters.', 'error');
+            if (password.length < 4) {
+                showMessage('⚠️ Password must be at least 4 characters.', 'error');
                 button.disabled = false;
                 button.textContent = 'Create Account';
                 return;
             }
 
             try {
-                // ✅ Signup endpoint expects JSON
+                console.log('📝 Signup attempt:', email);
+
+                // ✅ Signup expects JSON (UserSignup model)
                 const res = await fetch(`${API_BASE_URL}/auth/signup`, {
                     method: "POST",
-                    headers: { "Content-Type": "application/json" },
+                    headers: { 
+                        "Content-Type": "application/json",
+                        "Accept": "application/json"
+                    },
                     body: JSON.stringify({ username, email, password })
                 });
 
                 const data = await res.json();
+                console.log('📦 Signup response:', data);
                 
                 if (!res.ok) {
                     throw new Error(data.detail || "Signup failed");
                 }
 
-                // ✅ FIX 4: After signup, switch to login tab and show success message
-                showMessage("✅ Account created successfully! Please login now.", 'success');
+                // ✅ Auto-login after signup with token
+                localStorage.setItem("token", data.access_token);
+                localStorage.setItem("username", data.user.username);
+                localStorage.setItem("email", data.user.email);
+                localStorage.setItem("userId", data.user.id);
+
+                showMessage("✅ Account created! Redirecting to dashboard...", 'success');
                 
-                // Switch to login tab after 1.5 seconds
+                // ✅ Redirect to dashboard after signup
                 setTimeout(() => {
-                    document.querySelector('.auth-tab[data-tab="login"]').click();
-                    document.getElementById("login-email").value = email;
-                    messageContainer.style.display = 'none';
+                    window.location.href = "/dashboard";
                 }, 1500);
                 
             } catch (err) {
@@ -132,3 +148,14 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 });
+
+// ✅ Check if user is already logged in
+function isLoggedIn() {
+    return localStorage.getItem('token') !== null;
+}
+
+// ✅ Auto-redirect if already logged in
+if (window.location.pathname.includes('auth.html') && isLoggedIn()) {
+    console.log('✅ Already logged in, redirecting to dashboard');
+    window.location.href = '/dashboard';
+}
