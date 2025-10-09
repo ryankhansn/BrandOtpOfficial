@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Request, HTTPException, Depends, Form
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse, HTMLResponse, RedirectResponse
+from fastapi.responses import FileResponse, JSONResponse, HTMLResponse
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi.staticfiles import StaticFiles
@@ -9,15 +9,17 @@ import os
 import sqlite3
 import time
 
-# --- ✅ अपने सभी राउटर्स को यहाँ इम्पोर्ट करें ---
+# --- ✅ 1. अपने सभी राउटर्स को यहाँ इम्पोर्ट करें ---
 from backend.routes.smsman_numbers import router as smsman_router
 from backend.routes.pay0_order import router as pay0_router
 from backend.routes.payment_status import router as payment_status_router
+from backend.routes.webhook import router as webhook_router # वेबहुक राउटर (बैकअप के लिए)
 
-# (आपके बाकी के इम्पोर्ट्स जैसे hashlib, secrets, आदि)
+# (आपके बाकी के इम्पोर्ट्स)
 import hashlib
 import secrets
 
+# (आपके सभी फंक्शन्स)
 def get_password_hash(password: str) -> str:
     return hashlib.sha256(password.encode()).hexdigest()
 
@@ -52,13 +54,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# --- ✅ अपने सभी राउटर्स को यहाँ जोड़ें ---
+# --- ✅ 2. अपने सभी राउटर्स को यहाँ सही तरीके से जोड़ें ---
 app.include_router(pay0_router, prefix="/api/payments", tags=["Payments"])
 app.include_router(payment_status_router, prefix="/api/payments", tags=["Payments"])
+app.include_router(webhook_router, prefix="/api/payments", tags=["Payments"]) # वेबहुक जोड़ा गया
 app.include_router(smsman_router, prefix="/api/smsman", tags=["SMSMan API"])
 # ---------------------------------------------------
 
-# (यहाँ से आपका बाकी का main.py कोड शुरू होता है, जैसे init_database(), get_current_user(), आदि)
+# (यहाँ से आपका बाकी का main.py कोड शुरू होता है, जिसमें कोई बदलाव नहीं है)
 # ... init_database() ...
 # ... get_current_user() ...
 # ... Exception Handlers ...
@@ -69,11 +72,12 @@ app.include_router(smsman_router, prefix="/api/smsman", tags=["SMSMan API"])
 # ... @app.get("/api/wallet/transactions") ...
 # ... @app.get("/api/auth/me") ...
 
-# --- ❌ पुराना add-money रूट यहाँ से हटा दिया गया है ---
+# --- ❌ ध्यान दें: पुराना @app.post("/api/wallet/add-money") वाला फंक्शन और register_all_routers(app) यहाँ से हटा दिए गए हैं ---
 
 # ... (StaticFiles Mount और बाकी के Page Routes) ...
 # ... (Health Check और Startup/Shutdown Events) ...
 # ... (if __name__ == "__main__":) ...
+
 
 
 # Database initialization
@@ -602,6 +606,7 @@ if __name__ == "__main__":
         reload=False,
         log_level="info"
     )
+
 
 
 
