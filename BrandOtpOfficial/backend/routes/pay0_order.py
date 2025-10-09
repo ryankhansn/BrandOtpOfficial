@@ -14,7 +14,7 @@ class OrderBody(BaseModel):
     amount: float = Field(gt=49, lt=5001, description="Amount must be between 50 and 5000")
     customer_mobile: str # फ्रंटएंड से मोबाइल नंबर यहाँ आएगा
 
-@router.post("/create-order")
+@router.post("/pay0/create-order")
 async def create_pay0_order(order: OrderBody, current_user: dict = Depends(get_current_user)):
     """
     Creates a Pay0 order with a dynamic redirect URL containing the order_id.
@@ -52,4 +52,5 @@ async def create_pay0_order(order: OrderBody, current_user: dict = Depends(get_c
     except Exception as e:
         print(f"Error creating order: {e}") # यह लाइन एरर को लॉग करने में मदद करेगी
         raise HTTPException(status_code=500, detail=str(e))
+
 
