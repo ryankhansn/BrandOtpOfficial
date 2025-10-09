@@ -12,8 +12,8 @@ class Config:
     SMSMAN_API_KEY = os.getenv('SMSMAN_API_KEY')
     SMSMAN_BASE_URL = "https://api.smsman.com"
     
-    # Pay0 Configuration ✅ (यह लाइन जोड़े)
-    PAY0_USER_TOKEN = os.getenv('PAY0_USER_TOKEN', 'YOUR_PAY0_REAL_API_KEY_HERE')
+    # ✅ Pay0 Configuration - यह लाइन अब सही जगह पर है
+    PAY0_USER_TOKEN = os.getenv('PAY0_USER_TOKEN')
     
     # Application Configuration
     DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
@@ -23,4 +23,5 @@ class Config:
         """Convert SMSMan price to user price with markup"""
         return float(smsman_price) * Config.MARKUP_PERCENTAGE
 
-config = Config()  # ← यह लाइन नीचे डालें (settings -> config)
+# ✅ सबसे महत्वपूर्ण लाइन: क्लास का एक ऑब्जेक्ट बनाएँ
+config = Config()
