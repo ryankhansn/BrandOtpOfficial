@@ -5,7 +5,7 @@ import time
 # अपने प्रोजेक्ट के सही लोकेशन से इम्पोर्ट करें
 from backend.utils.pay0_client import create_order
 from backend.utils.auth_utils import get_current_user
-from backend.config import settings # मान लिया कि आपकी Pay0 सेटिंग्स यहाँ हैं
+from backend.config import config  # मान लिया कि आपकी Pay0 सेटिंग्स यहाँ हैं
 
 router = APIRouter()
 
@@ -52,4 +52,5 @@ async def create_pay0_order(order: OrderBody, current_user: dict = Depends(get_c
     except Exception as e:
         print(f"Error creating order: {e}") # लॉगिंग के लिए
         raise HTTPException(status_code=500, detail=str(e))
+
 
