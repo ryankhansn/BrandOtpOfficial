@@ -5,11 +5,11 @@ import time
 # अपने प्रोजेक्ट के सही लोकेशन से इम्पोर्ट करें
 from backend.utils.pay0_client import create_order
 from backend.utils.auth_utils import get_current_user
-from backend.config import config  # मान लिया कि आपकी Pay0 सेटिंग्स यहाँ हैं
+from backend.config import config  # ✅ FIX 1: 'settings' की जगह 'config' इम्पोर्ट किया गया है
 
 router = APIRouter()
 
-# ✅ Pydantic मॉडल को अपडेट किया गया
+# यह मॉडल फ्रंटएंड से आने वाले डेटा को वैलिडेट करेगा
 class OrderBody(BaseModel):
     amount: float = Field(gt=49, lt=5001, description="Amount must be between 50 and 5000")
     customer_mobile: str # फ्रंटएंड से मोबाइल नंबर यहाँ आएगा
@@ -27,15 +27,15 @@ async def create_pay0_order(order: OrderBody, current_user: dict = Depends(get_c
         # अपने Netlify/Render URL का उपयोग करें
         redirect_url = f"https://brandotpofficial.onrender.com/payment-status.html?orderid={order_id}"
 
-        # ✅ create_order फंक्शन को फ्रंटएंड से मिले मोबाइल नंबर के साथ कॉल करें
+        # ✅ FIX 2: create_order फंक्शन को बिना कीवर्ड के, सही क्रम में कॉल किया गया है
         payment_resp = create_order(
-            customer_mobile=order.customer_mobile, # पेलोड से लिया गया
-            user_token=settings.PAY0_USER_TOKEN, # आपकी config/settings से
-            amount=order.amount,
-            order_id=order_id,
-            redirect_url=redirect_url,
-            remark1=user_id,
-            remark2="WalletTopup"
+            order.customer_mobile,
+            config.PAY0_USER_TOKEN,
+            order.amount,
+            order_id,
+            redirect_url,
+            user_id,
+            "WalletTopup"
         )
         
         # Pay0 से मिले पेमेंट लिंक को निकालें
@@ -50,7 +50,6 @@ async def create_pay0_order(order: OrderBody, current_user: dict = Depends(get_c
             "message": "Order created successfully."
         }
     except Exception as e:
-        print(f"Error creating order: {e}") # लॉगिंग के लिए
+        print(f"Error creating order: {e}") # यह लाइन एरर को लॉग करने में मदद करेगी
         raise HTTPException(status_code=500, detail=str(e))
-
 
