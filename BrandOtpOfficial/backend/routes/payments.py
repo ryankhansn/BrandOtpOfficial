@@ -9,7 +9,7 @@ from bson import ObjectId
 
 # अपने प्रोजेक्ट के अन्य राउटर्स को इम्पोर्ट करें
 from .pay0_order import router as pay0_order_router
-from .pay0_webhook import router as pay0_webhook_router
+from .webhook import router as webhook_router
 
 # अपने प्रोजेक्ट के यूटिलिटी और डीबी को इम्पोर्ट करें
 from backend.utils.auth_utils import get_current_user
@@ -22,7 +22,7 @@ router = APIRouter()
 # अन्य राउटर्स को इसमें शामिल करें (आपका मौजूदा कोड)
 router.include_router(pay0_order_router, prefix="/pay0", tags=["Pay0"])
 # हम वेबहूक का उपयोग नहीं कर रहे हैं, लेकिन इसे यहाँ छोड़ सकते हैं
-router.include_router(pay0_webhook_router, prefix="/pay0", tags=["Pay0"])
+router.include_router(webhook_router, prefix="/pay0", tags=["Pay0"])
 
 # .env फ़ाइल से वेरिएबल्स लोड करें
 load_dotenv()
