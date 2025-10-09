@@ -4,73 +4,76 @@ from fastapi.responses import FileResponse, JSONResponse, HTMLResponse, Redirect
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi.staticfiles import StaticFiles
-from fastapi.security import HTTPBearer
 import uvicorn
 import os
-import asyncio
 import sqlite3
 import time
-from contextlib import suppress
-from typing import Optional
-from datetime import datetime, timedelta
 
-# Import custom routers
-from backend.routes import register_all_routers
+# --- ✅ अपने सभी राउटर्स को यहाँ इम्पोर्ट करें ---
 from backend.routes.smsman_numbers import router as smsman_router
+from backend.routes.pay0_order import router as pay0_router
+from backend.routes.payment_status import router as payment_status_router
 
-# ✅ CLEAN IMPORTS - No JWT, No passlib
+# (आपके बाकी के इम्पोर्ट्स जैसे hashlib, secrets, आदि)
 import hashlib
 import secrets
 
-# ✅ Password functions using hashlib (NO passlib)
 def get_password_hash(password: str) -> str:
-    """Simple hash for testing (replace with proper hashing in production)"""
     return hashlib.sha256(password.encode()).hexdigest()
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Verify password"""
     return hashlib.sha256(plain_password.encode()).hexdigest() == hashed_password
 
-# ✅ Simple token function (NO JWT)
 def create_access_token(data: dict, expires_delta=None):
-    """Create simple token (no JWT for now)"""
     return secrets.token_urlsafe(32)
 
-# Settings
-SECRET_KEY = "your-secret-key-change-in-production"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
-
-# PAY0 Configuration
-PAY0_USER_TOKEN = "your-live-or-test-token"
-
-# Security
-security = HTTPBearer(auto_error=False)
-
-# App Initialization (Only once!)
+# App Initialization
 app = FastAPI(
     title="BrandOtp Official API",
-    description="Complete OTP Service API with Authentication & Payments + SMSMan Integration",
+    description="Complete OTP Service API with Authentication & Payments",
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc"
 )
 
-# main.py - CORS Middleware Update
+# CORS Middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "https://brandotpofficial.shop",
         "https://www.brandotpofficial.shop",
-        "https://brandotpofficials.netlify.app",  # ✅ No trailing slash!
+        "https://brandotpofficials.netlify.app",
         "http://localhost:8000",
         "http://127.0.0.1:5500",
-        "http://localhost:5500",  # ✅ Add this too
+        "http://localhost:5500",
     ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-    expose_headers=["*"]
 )
+
+# --- ✅ अपने सभी राउटर्स को यहाँ जोड़ें ---
+app.include_router(pay0_router, prefix="/api/payments", tags=["Payments"])
+app.include_router(payment_status_router, prefix="/api/payments", tags=["Payments"])
+app.include_router(smsman_router, prefix="/api/smsman", tags=["SMSMan API"])
+# ---------------------------------------------------
+
+# (यहाँ से आपका बाकी का main.py कोड शुरू होता है, जैसे init_database(), get_current_user(), आदि)
+# ... init_database() ...
+# ... get_current_user() ...
+# ... Exception Handlers ...
+# ... /api/history/numbers ...
+# ... @app.post("/api/buy-number") ...
+# ... @app.post("/api/update-sms-status") ...
+# ... @app.get("/api/wallet/balance") ...
+# ... @app.get("/api/wallet/transactions") ...
+# ... @app.get("/api/auth/me") ...
+
+# --- ❌ पुराना add-money रूट यहाँ से हटा दिया गया है ---
+
+# ... (StaticFiles Mount और बाकी के Page Routes) ...
+# ... (Health Check और Startup/Shutdown Events) ...
+# ... (if __name__ == "__main__":) ...
 
 
 # Database initialization
@@ -361,66 +364,7 @@ async def get_wallet_transactions(request: Request):
             content={"success": False, "error": str(e), "transactions": []}
         )
 
-@app.post("/api/wallet/add-money")
-async def add_money_to_wallet(
-    request: Request,
-    amount: float = Form(...),
-    payment_method: str = Form(default="manual")
-):
-    """Add money to wallet"""
-    try:
-        current_user = get_current_user(request)
-        user_id = current_user["user_id"]
-        
-        if amount < 50:
-            return JSONResponse(
-                status_code=400,
-                content={"success": False, "error": "Minimum amount is ₹50"}
-            )
-        
-        if amount > 5000:
-            return JSONResponse(
-                status_code=400,
-                content={"success": False, "error": "Maximum amount is ₹5000"}
-            )
-        
-        conn = sqlite3.connect('database.db')
-        cursor = conn.cursor()
-        
-        transaction_id = f"TXN{int(time.time())}"
-        
-        cursor.execute("""
-            INSERT INTO wallet_transactions 
-            (user_id, transaction_id, type, amount, reason, status)
-            VALUES (?, ?, 'credit', ?, ?, 'completed')
-        """, (user_id, transaction_id, amount, f"Money added via {payment_method}"))
-        
-        cursor.execute("""
-            UPDATE users 
-            SET balance = COALESCE(balance, 0) + ? 
-            WHERE id = ?
-        """, (amount, user_id))
-        
-        cursor.execute("SELECT balance FROM users WHERE id = ?", (user_id,))
-        result = cursor.fetchone()
-        new_balance = float(result[0]) if result else amount
-        
-        conn.commit()
-        conn.close()
-        
-        return {
-            "success": True,
-            "message": f"₹{amount:.2f} added successfully!",
-            "balance": new_balance,
-            "transaction_id": transaction_id
-        }
-        
-    except Exception as e:
-        print(f"❌ Add money API error: {e}")
-        return JSONResponse(
-            status_code=500,
-            content={"success": False, "error": str(e)}
-        )
+
 
 @app.get("/api/auth/me")
 async def get_current_user_info(request: Request):
@@ -658,6 +602,7 @@ if __name__ == "__main__":
         reload=False,
         log_level="info"
     )
+
 
 
 
