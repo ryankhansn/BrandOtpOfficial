@@ -1,56 +1,55 @@
 document.addEventListener('DOMContentLoaded', () => {
+    const API_BASE_URL = 'https://brandotpofficial.onrender.com';
     const statusMessage = document.getElementById('status-message');
     const loader = document.querySelector('.loader');
     const dashboardLink = document.getElementById('dashboard-link');
 
-    const checkPaymentStatus = async () => {
+    const verifyPayment = async () => {
         const urlParams = new URLSearchParams(window.location.search);
-        const orderId = urlParams.get('orderid');
+        // ✅ FIX: Pay0 से 'orderid' आता है, 'order_id' नहीं
+        const orderId = urlParams.get('orderid'); 
+        const token = localStorage.getItem('token');
 
         if (!orderId) {
             statusMessage.textContent = 'Error: Order ID not found in URL.';
             loader.style.display = 'none';
             return;
         }
+        if (!token) {
+            statusMessage.textContent = 'Authentication Error. Please log in to see the status.';
+            loader.style.display = 'none';
+            return;
+        }
 
         try {
-            const token = localStorage.getItem('token');
-            if (!token) {
-                statusMessage.textContent = 'Authentication error. Please log in again.';
-                loader.style.display = 'none';
-                return;
-            }
-
-            // Replace with your actual backend URL
-            const backendUrl = 'https://brandotpofficial.onrender.com';
+            statusMessage.textContent = 'Verifying your payment, please wait...';
             
-            const response = await fetch(`${backendUrl}/api/payments/check-status/${orderId}`, {
-                method: 'POST',
+            // ✅ FIX: API का URL और मेथड सही किया गया है
+            const res = await fetch(`${API_BASE_URL}/api/payments/verify-payment/${orderId}`, {
+                method: 'GET', // ✅ मेथड GET होना चाहिए जैसा हमने बैकएंड में बनाया है
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
             });
 
-            const result = await response.json();
-
-            loader.style.display = 'none';
-
-            if (response.ok && result.success) {
-                statusMessage.textContent = result.message || 'Payment successful and balance updated!';
-                statusMessage.style.color = 'green';
-                dashboardLink.style.display = 'block';
-            } else {
-                statusMessage.textContent = result.detail || 'Payment verification failed. Please contact support.';
-                statusMessage.style.color = 'red';
+            const data = await res.json();
+            if (!res.ok) {
+                throw new Error(data.detail || 'Payment verification failed.');
             }
 
+            // ✅ पेमेंट सफल!
+            statusMessage.textContent = '✅ Payment Successful! Your wallet has been updated.';
+            statusMessage.style.color = 'green';
+            dashboardLink.style.display = 'block';
+
         } catch (error) {
-            loader.style.display = 'none';
-            statusMessage.textContent = 'An error occurred while checking status. Please check your dashboard or contact support.';
+            statusMessage.textContent = `❌ Verification Failed: ${error.message}`;
             statusMessage.style.color = 'red';
-            console.error('Error checking payment status:', error);
+            dashboardLink.style.display = 'block';
+        } finally {
+            loader.style.display = 'none';
         }
     };
 
-    checkPaymentStatus();
+    verifyPayment();
 });
