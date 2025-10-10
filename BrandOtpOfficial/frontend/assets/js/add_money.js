@@ -5,9 +5,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!addMoneyForm) return;
 
     const amountInput = document.getElementById('amount');
-    const mobileInput = document.getElementById('mobile'); // मोबाइल इनपुट
+    const mobileInput = document.getElementById('mobile');
     const messageDiv = document.getElementById('message');
     const submitButton = document.getElementById('addMoneyBtn');
+
+    // ✅ FIX 1: API का पूरा और सही URL यहाँ डालें
+    const API_BASE_URL = 'https://brandotpofficial.onrender.com';
 
     function showMessage(text, type = 'error') {
         if (messageDiv) {
@@ -50,7 +53,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         try {
-            const response = await fetch(`/api/payments/pay0/create-order`, {
+            // ✅ FIX 2: पूरे URL का उपयोग करें
+            const response = await fetch(`${API_BASE_URL}/api/payments/pay0/create-order`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -58,7 +62,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 },
                 body: JSON.stringify({
                     amount: amount,
-                    customer_mobile: mobile // ✅ मोबाइल नंबर भेजा जा रहा है
+                    customer_mobile: mobile
                 })
             });
 
@@ -68,8 +72,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error(result.detail || 'Failed to create order.');
             }
 
-            if (result.payment_url) {
-                window.location.href = result.payment_url;
+            if (result.payment_url || result.paymenturl) {
+                // ✅ दोनों कीज़ (payment_url और paymenturl) को हैंडल करें
+                window.location.href = result.payment_url || result.paymenturl;
             } else {
                 throw new Error('Payment URL not received from server.');
             }
