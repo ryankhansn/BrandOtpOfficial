@@ -5,14 +5,13 @@ import time
 # अपने प्रोजेक्ट के सही लोकेशन से इम्पोर्ट करें
 from backend.utils.pay0_client import create_order
 from backend.utils.auth_utils import get_current_user
-from backend.config import config  # ✅ FIX 1: 'settings' की जगह 'config' इम्पोर्ट किया गया है
+from backend.config import config
 
 router = APIRouter()
 
-# यह मॉडल फ्रंटएंड से आने वाले डेटा को वैलिडेट करेगा
 class OrderBody(BaseModel):
     amount: float = Field(gt=49, lt=5001, description="Amount must be between 50 and 5000")
-    customer_mobile: str # फ्रंटएंड से मोबाइल नंबर यहाँ आएगा
+    customer_mobile: str
 
 @router.post("/pay0/create-order")
 async def create_pay0_order(order: OrderBody, current_user: dict = Depends(get_current_user)):
@@ -25,9 +24,9 @@ async def create_pay0_order(order: OrderBody, current_user: dict = Depends(get_c
         order_id = f"BRANDOTP_{user_id[:4]}_{timestamp}"
 
         # अपने Netlify/Render URL का उपयोग करें
-        redirect_url = f"https://brandotpofficial.onrender.com/payment-status.html?orderid={order_id}"
+        redirect_url = f"https://brandotpofficials.netlify.app/payment-status.html?orderid={order_id}"
 
-        # ✅ FIX 2: create_order फंक्शन को बिना कीवर्ड के, सही क्रम में कॉल किया गया है
+        # ✅ create_order फंक्शन को कॉल किया गया है
         payment_resp = create_order(
             order.customer_mobile,
             config.PAY0_USER_TOKEN,
@@ -38,10 +37,10 @@ async def create_pay0_order(order: OrderBody, current_user: dict = Depends(get_c
             "WalletTopup"
         )
         
-        # Pay0 से मिले पेमेंट लिंक को निकालें
-     pay0_link = payment_resp.get("paymenturl") or payment_resp.get("payment_url")
-if not pay0_link:
-     raise Exception("payment_url missing in Pay0 API response")
+        # ✅ FIX: Indentation (स्पेस) सही किया गया है
+        pay0_link = payment_resp.get("paymenturl") or payment_resp.get("payment_url")
+        if not pay0_link:
+             raise Exception("payment_url missing in Pay0 API response")
 
         return {
             "success": True,
@@ -49,9 +48,7 @@ if not pay0_link:
             "payment_url": pay0_link,
             "message": "Order created successfully."
         }
+        
     except Exception as e:
-        print(f"Error creating order: {e}") # यह लाइन एरर को लॉग करने में मदद करेगी
+        print(f"Error creating order: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
-
-
