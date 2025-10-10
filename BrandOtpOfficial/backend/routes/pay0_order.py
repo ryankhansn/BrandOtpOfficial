@@ -39,9 +39,9 @@ async def create_pay0_order(order: OrderBody, current_user: dict = Depends(get_c
         )
         
         # Pay0 से मिले पेमेंट लिंक को निकालें
-        pay0_link = payment_resp.get("payment_url")
-        if not pay0_link:
-             raise Exception("payment_url missing in Pay0 API response")
+     pay0_link = payment_resp.get("paymenturl") or payment_resp.get("payment_url")
+if not pay0_link:
+     raise Exception("payment_url missing in Pay0 API response")
 
         return {
             "success": True,
@@ -52,5 +52,6 @@ async def create_pay0_order(order: OrderBody, current_user: dict = Depends(get_c
     except Exception as e:
         print(f"Error creating order: {e}") # यह लाइन एरर को लॉग करने में मदद करेगी
         raise HTTPException(status_code=500, detail=str(e))
+
 
 
