@@ -14,7 +14,7 @@ from backend.routes.smsman_numbers import router as smsman_router
 from backend.routes.pay0_order import router as pay0_router
 from backend.routes.payment_status import router as payment_status_router
 from backend.routes.webhook import router as webhook_router # वेबहुक राउटर (बैकअप के लिए)
-
+from backend.routes.auth import router as auth_router
 # (आपके बाकी के इम्पोर्ट्स)
 import hashlib
 import secrets
@@ -60,6 +60,7 @@ app.include_router(pay0_router, prefix="/api/payments", tags=["Payments"])
 app.include_router(payment_status_router, prefix="/api/payments", tags=["Payments"])
 app.include_router(webhook_router, prefix="/api/payments", tags=["Payments"]) # वेबहुक जोड़ा गया
 app.include_router(smsman_router, prefix="/api/smsman", tags=["SMSMan API"])
+app.include_router(auth_router, prefix="/api/auth", tags=["Auth"])
 # ---------------------------------------------------
 
 # (यहाँ से आपका बाकी का main.py कोड शुरू होता है, जिसमें कोई बदलाव नहीं है)
@@ -606,6 +607,7 @@ if __name__ == "__main__":
         reload=False,
         log_level="info"
     )
+
 
 
 
