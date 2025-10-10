@@ -389,8 +389,7 @@ async def get_current_user_info(request: Request):
             content={"success": False, "error": "Authentication required"}
         )
 
-# ✅ Register all existing routers
-register_all_routers(app)
+
 
 # ✅ ADD SMSMan routes
 app.include_router(smsman_router, prefix="/api/smsman", tags=["SMSMan API"])
@@ -606,6 +605,7 @@ if __name__ == "__main__":
         reload=False,
         log_level="info"
     )
+
 
 
 
