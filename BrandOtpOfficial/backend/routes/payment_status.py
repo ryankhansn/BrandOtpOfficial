@@ -1,60 +1,120 @@
-from fastapi import APIRouter, Depends, HTTPException
-import sqlite3
+from fastapi import APIRouter, Depends, HTTPException, Query
+from bson import ObjectId
 import time
 
-# अपने प्रोजेक्ट के सही लोकेशन से इम्पोर्ट करें
+from backend.db import users_collection, payments_collection
 from backend.utils.auth_utils import get_current_user
 from backend.utils.order_status_sdk import OrderStatusSDK
 from backend.config import config
 
 router = APIRouter()
 
-@router.get("/verify-payment/{order_id}")
-async def verify_payment_status(order_id: str, current_user: dict = Depends(get_current_user)):
+@router.get("/check-status")
+async def check_payment_status(
+    order_id: str = Query(..., description="Order ID to check"),
+    current_user: dict = Depends(get_current_user)
+):
     """
-    Checks the payment status with Pay0 and updates the user's balance if successful.
+    Check payment status from Pay0 and update user wallet if successful.
+    This is called from payment-status.html page.
     """
     try:
         user_id = current_user.get("id")
-
-        # 1. सुरक्षा जाँच: क्या यह ऑर्डर पहले ही प्रोसेस हो चुका है?
-        conn = sqlite3.connect('database.db')
-        cursor = conn.cursor()
-        cursor.execute("SELECT status FROM wallet_transactions WHERE transaction_id = ?", (order_id,))
-        transaction = cursor.fetchone()
-
-        if transaction and transaction[0] == 'completed':
-            conn.close()
-            return {"success": True, "message": "Payment already verified."}
-
-        # 2. Pay0 से असली स्टेटस पता करें
+        
+        # 1. Check if payment already processed
+        existing_payment = payments_collection.find_one({"order_id": order_id})
+        
+        if existing_payment and existing_payment.get("status") == "SUCCESS":
+            return {
+                "success": True,
+                "status": "SUCCESS",
+                "message": "Payment already verified and wallet updated",
+                "already_processed": True
+            }
+        
+        # 2. Check status with Pay0 API
         status_sdk = OrderStatusSDK()
-        status_response = status_sdk.check_order_status(
+        pay0_response = status_sdk.check_order_status(
             user_token=config.PAY0_USER_TOKEN,
             order_id=order_id
         )
-
-        if not status_response or status_response.get("status") != "SUCCESS":
-            conn.close()
-            raise HTTPException(status_code=400, detail="Payment not successful or is still pending.")
-
-        # 3. अगर पेमेंट सफल है, तो बैलेंस अपडेट करें
-        amount_to_add = float(status_response.get("amount", 0))
-
-        # यूजर का बैलेंस बढ़ाएँ
-        cursor.execute("UPDATE users SET balance = COALESCE(balance, 0) + ? WHERE id = ?", (amount_to_add, user_id))
-
-        # ट्रांजैक्शन को 'completed' मार्क करें
-        cursor.execute("UPDATE wallet_transactions SET status = 'completed' WHERE transaction_id = ?", (order_id,))
         
-        conn.commit()
-        conn.close()
-
-        print(f"✅ Balance updated for user {user_id} by {amount_to_add} for order {order_id}")
-        return {"success": True, "message": "Payment verified and wallet has been updated!"}
-
+        if not pay0_response or not pay0_response.get("status"):
+            return {
+                "success": False,
+                "status": "PENDING",
+                "message": "Payment is still pending. Please wait 10-20 minutes.",
+                "pay0_response": pay0_response
+            }
+        
+        # 3. Extract status from Pay0 response
+        result = pay0_response.get("result", {})
+        txn_status = result.get("txnStatus", "PENDING")
+        
+        if txn_status == "SUCCESS":
+            # 4. Update user wallet
+            amount = float(result.get("amount", 0))
+            
+            # Update user balance in MongoDB
+            update_result = users_collection.update_one(
+                {"_id": ObjectId(user_id)},
+                {"$inc": {"balance": amount}}
+            )
+            
+            # 5. Save/Update payment record
+            payment_data = {
+                "order_id": order_id,
+                "user_id": user_id,
+                "amount": amount,
+                "status": "SUCCESS",
+                "txn_status": txn_status,
+                "utr": result.get("utr", ""),
+                "date": result.get("date", ""),
+                "updated_at": time.time(),
+                "type": "credit",
+                "reason": "Wallet Top-up via Pay0"
+            }
+            
+            if existing_payment:
+                payments_collection.update_one(
+                    {"order_id": order_id},
+                    {"$set": payment_data}
+                )
+            else:
+                payment_data["created_at"] = time.time()
+                payments_collection.insert_one(payment_data)
+            
+            print(f"✅ Wallet updated: User {user_id}, Amount +₹{amount}, Order {order_id}")
+            
+            return {
+                "success": True,
+                "status": "SUCCESS",
+                "message": f"Payment successful! ₹{amount} added to your wallet.",
+                "amount": amount,
+                "utr": result.get("utr", "")
+            }
+        
+        elif txn_status == "PENDING":
+            return {
+                "success": False,
+                "status": "PENDING",
+                "message": "Payment is still pending. Please wait 10-20 minutes and refresh."
+            }
+        
+        else:  # FAILED
+            # Save failed payment record
+            if existing_payment:
+                payments_collection.update_one(
+                    {"order_id": order_id},
+                    {"$set": {"status": "FAILED", "updated_at": time.time()}}
+                )
+            
+            return {
+                "success": False,
+                "status": "FAILED",
+                "message": "Payment failed. Please try again or contact support."
+            }
+        
     except Exception as e:
-        print(f"❌ Error verifying payment: {e}")
-        if 'conn' in locals() and conn:
-            conn.close()
-        raise HTTPException(status_code=500, detail=f"An internal error occurred: {e}")
+        print(f"❌ Payment status check error: {e}")
+        raise HTTPException(status_code=500, detail=f"Error checking payment status: {str(e)}")
