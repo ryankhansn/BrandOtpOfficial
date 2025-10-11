@@ -1,5 +1,4 @@
-// frontend/assets/js/add_money.js - FINAL WORKING VERSION
-
+// frontend/assets/js/add_money.js
 document.addEventListener('DOMContentLoaded', () => {
     const addMoneyForm = document.getElementById('addMoneyForm');
     if (!addMoneyForm) return;
@@ -9,7 +8,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const messageDiv = document.getElementById('message');
     const submitButton = document.getElementById('addMoneyBtn');
 
-    // ✅ FIX 1: API का पूरा और सही URL यहाँ डालें
     const API_BASE_URL = 'https://brandotpofficial.onrender.com';
 
     function showMessage(text, type = 'error') {
@@ -53,7 +51,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         try {
-            // ✅ FIX 2: पूरे URL का उपयोग करें
             const response = await fetch(`${API_BASE_URL}/api/payments/pay0/create-order`, {
                 method: 'POST',
                 headers: {
@@ -73,7 +70,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             if (result.payment_url || result.paymenturl) {
-                // ✅ दोनों कीज़ (payment_url और paymenturl) को हैंडल करें
                 window.location.href = result.payment_url || result.paymenturl;
             } else {
                 throw new Error('Payment URL not received from server.');
