@@ -24,28 +24,29 @@ async def create_pay0_order(order: OrderBody, current_user: dict = Depends(get_c
         # Redirect URL with order_id parameter
         redirect_url = f"https://brandotpofficials.netlify.app/payment-status.html?orderid={order_id}"
 
-        # ✅ FIXED: Pass only 5 arguments matching create_order() signature
+        # ✅ FIXED: Pass only 5 arguments
         payment_resp = create_order(
             order.customer_mobile,    # mobile: str
             order.amount,             # amount: float
             redirect_url,             # redirect: str
-            user_id,                  # remark1: str (optional)
-            "WalletTopup"            # remark2: str (optional)
+            user_id,                  # remark1: str
+            "WalletTopup"            # remark2: str
         )
         
-        # Extract payment URL from response
-        pay0_link = payment_resp.get("paymenturl") or payment_resp.get("payment_url")
+        # ✅ FIXED: Check for 'paymenturl' first (Pay0 uses this key)
+        pay0_link = payment_resp.get("paymenturl")
+        
         if not pay0_link:
-            raise Exception("payment_url missing in Pay0 API response")
+            print(f"❌ Pay0 API Response: {payment_resp}")
+            raise Exception(f"paymenturl missing in Pay0 API response: {payment_resp}")
 
         return {
             "success": True,
             "order_id": order_id,
-            "paymenturl": pay0_link,
+            "paymenturl": pay0_link,  # ✅ Changed key name
             "message": "Order created successfully."
         }
         
     except Exception as e:
         print(f"❌ Error creating order: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
