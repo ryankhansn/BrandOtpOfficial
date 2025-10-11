@@ -1,45 +1,65 @@
-from fastapi import APIRouter, Request, HTTPException
+from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
-import sqlite3
+from bson import ObjectId
+import time
+
+from backend.db import users_collection, payments_collection
 
 router = APIRouter()
 
 @router.post("/webhook")
 async def pay0_webhook(request: Request):
+    """
+    Optional webhook handler for Pay0.
+    This is backup - main flow uses manual status check.
+    """
     try:
         data = await request.form()
         status = data.get("status")
         order_id = data.get("order_id")
-        user_id = data.get("remark1")
-
+        user_id = data.get("remark1")  # We passed user_id in remark1
+        amount = float(data.get("amount", 0))
+        
+        print(f"📩 Webhook received: Order {order_id}, Status {status}")
+        
         if status != "SUCCESS":
-            return JSONResponse(content={"success": False, "message": "Status is not SUCCESS"}, status_code=400)
-
-        conn = sqlite3.connect('database.db')
-        cursor = conn.cursor()
-
-        cursor.execute("SELECT status FROM wallet_transactions WHERE transaction_id = ?", (order_id,))
-        transaction = cursor.fetchone()
-        if transaction and transaction[0] == 'completed':
-            conn.close()
+            return JSONResponse(content={"success": False, "message": "Status not SUCCESS"})
+        
+        # Check if already processed
+        existing_payment = payments_collection.find_one({"order_id": order_id})
+        if existing_payment and existing_payment.get("status") == "SUCCESS":
             return JSONResponse(content={"success": True, "message": "Already processed"})
-
-        cursor.execute("SELECT amount FROM wallet_transactions WHERE transaction_id = ?", (order_id,))
-        amount_result = cursor.fetchone()
-        if not amount_result:
-            raise Exception("Transaction amount not found.")
-
-        amount_to_add = amount_result[0]
-        cursor.execute("UPDATE users SET balance = COALESCE(balance, 0) + ? WHERE id = ?", (amount_to_add, user_id))
-        cursor.execute("UPDATE wallet_transactions SET status = 'completed' WHERE transaction_id = ?", (order_id,))
-
-        conn.commit()
-        conn.close()
-        print(f"✅ [WEBHOOK] Balance updated for user {user_id} for order {order_id}")
-        return JSONResponse(content={"success": True})
-
+        
+        # Update user wallet
+        users_collection.update_one(
+            {"_id": ObjectId(user_id)},
+            {"$inc": {"balance": amount}}
+        )
+        
+        # Save payment record
+        payment_data = {
+            "order_id": order_id,
+            "user_id": user_id,
+            "amount": amount,
+            "status": "SUCCESS",
+            "type": "credit",
+            "reason": "Wallet Top-up via Pay0 Webhook",
+            "updated_at": time.time()
+        }
+        
+        if existing_payment:
+            payments_collection.update_one(
+                {"order_id": order_id},
+                {"$set": payment_data}
+            )
+        else:
+            payment_data["created_at"] = time.time()
+            payments_collection.insert_one(payment_data)
+        
+        print(f"✅ [WEBHOOK] Wallet updated: User {user_id}, Amount +₹{amount}")
+        
+        return JSONResponse(content={"success": True, "message": "Wallet updated"})
+        
     except Exception as e:
-        if 'conn' in locals() and conn:
-            conn.close()
         print(f"❌ [WEBHOOK] Error: {e}")
         return JSONResponse(content={"success": False, "error": str(e)}, status_code=500)
