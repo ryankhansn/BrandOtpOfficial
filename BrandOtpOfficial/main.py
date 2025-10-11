@@ -4,6 +4,8 @@ from fastapi.responses import FileResponse, JSONResponse, HTMLResponse
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi.staticfiles import StaticFiles
+from contextlib import suppress  # ✅ ADD THIS LINE
+import asyncio  # ✅ ADD THIS LINE
 import uvicorn
 import os
 import sqlite3
@@ -607,6 +609,7 @@ if __name__ == "__main__":
         reload=False,
         log_level="info"
     )
+
 
 
 
