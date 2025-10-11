@@ -41,10 +41,11 @@ async def create_pay0_order(order: OrderBody, current_user: dict = Depends(get_c
         return {
             "success": True,
             "order_id": order_id,
-            "payment_url": pay0_link,
+            "paymenturl": pay0_link,
             "message": "Order created successfully."
         }
         
     except Exception as e:
         print(f"❌ Error creating order: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
