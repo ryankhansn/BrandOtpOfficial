@@ -37,7 +37,7 @@ async function initializeWallet() {
 // ✅ AUTHENTICATION CHECK
 async function checkAuthentication() {
     try {
-        const accessToken = localStorage.getItem('access_token');
+        const accessToken = localStorage.getItem('token');  // ✅ Changed to 'token'
         if (!accessToken) {
             console.log('❌ No access token found, redirecting to login');
            window.location.href = 'login.html';
@@ -45,14 +45,14 @@ async function checkAuthentication() {
         }
         
         // Verify token with backend
-        const response = await fetch(`${API_BASE_URL}/api/auth/me`, {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${accessToken}`,
-                'Content-Type': 'application/json'
-            }
-        });
-        
+     const response = await fetch(`${API_BASE_URL}/api/auth/me`, {
+    method: 'GET',
+    headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json'
+    }
+});
+
         if (response.ok) {
             const data = await response.json();
             if (data.success) {
@@ -63,16 +63,16 @@ async function checkAuthentication() {
         }
         
         // Token invalid, redirect to login
-        localStorage.removeItem('access_token');
+        localStorage.removeItem('token');  // ✅ Changed to 'token'
        window.location.href = 'login.html';
         return false;
         
-    } catch (error) {
-        console.error('❌ Authentication error:', error);
-        localStorage.removeItem('access_token');
-        window.location.href = '/login';
-        return false;
-    }
+   } catch (error) {
+    console.error('❌ Authentication error:', error);
+    localStorage.removeItem('token');  // ✅ CORRECT KEY
+    window.location.href = '/login';
+    return false;
+}
 }
 
 // ✅ LOAD REAL WALLET DATA FROM API
@@ -81,8 +81,7 @@ async function loadWalletData() {
     isRefreshing = true;
     
     try {
-        const accessToken = localStorage.getItem('access_token');
-        
+        const accessToken = localStorage.getItem('token');  // ✅ Changed to 'token' 
         // Show loading
         showLoading(true);
         
@@ -260,4 +259,5 @@ function goToAddMoney() {
 }
 
 console.log('✅ Real Wallet JavaScript loaded successfully');
+
 
