@@ -1,4 +1,4 @@
-// frontend/assets/js/api.js - COMPLETE FIXED VERSION
+// frontend/assets/js/api.js - COMPLETE FIXED VERSION - NO AUTH CHANGES!
 
 const API_BASE_URL = 'https://brandotpofficial.onrender.com';
 
@@ -21,9 +21,9 @@ async function apiRequest(endpoint, method = 'GET', data = null, token = null) {
     return result;
 }
 
-// ✅ MAIN API FUNCTIONS - ALL FIXED WITH /api PREFIX!
+// ✅ MAIN API FUNCTIONS - ALL ORIGINAL FUNCTIONS INCLUDED!
 const api = {
-    // ✅ FIXED Authentication - Added /api prefix
+    // ✅ ORIGINAL Authentication - NO CHANGES
     auth: {
         login: async (email, password) => {
             // ✅ FIX: Backend expects JSON at /api/auth/login
@@ -70,7 +70,7 @@ const api = {
         }
     },
     
-    // ✅ Wallet Operations - Added /api prefix
+    // ✅ ORIGINAL Wallet Operations - NO CHANGES
     wallet: {
         getBalance: async () => {
             const token = localStorage.getItem('token');
@@ -103,8 +103,9 @@ const api = {
         }
     },
     
-    // ✅ SMSMan Services - Added /api prefix
+    // ✅ SMSMan Services - WITH NEW FUNCTIONS ADDED
     smsman: {
+        // ORIGINAL: Get services
         getServices: async () => {
             // ✅ FIX: Added /api prefix
             const data = await apiRequest('/api/smsman/services');
@@ -112,16 +113,26 @@ const api = {
             return data.services || [];
         },
         
+        // ✅ NEW: Get countries
+        getCountries: async () => {
+            const data = await apiRequest('/api/smsman/countries');
+            console.log('✅ Countries loaded:', data.countries);
+            return data.countries || [];
+        },
+        
+        // ORIGINAL: Get meta
         getMeta: async () => {
             // ✅ FIX: Added /api prefix
             return apiRequest('/api/smsman/meta');
         },
         
+        // ORIGINAL: Get price
         getPrice: async (applicationId, countryId) => {
             // ✅ FIX: Added /api prefix
             return apiRequest(`/api/smsman/price/${applicationId}/${countryId}`);
         },
         
+        // ORIGINAL: Buy number
         buyNumber: async (applicationId, countryId) => {
             const token = localStorage.getItem('token');
             // ✅ FIX: Added /api prefix
@@ -131,20 +142,38 @@ const api = {
             }, token);
         },
         
+        // ORIGINAL: Get SMS
         getSMS: async (requestId) => {
             const token = localStorage.getItem('token');
             // ✅ FIX: Added /api prefix
             return apiRequest(`/api/smsman/sms/${requestId}`, 'GET', null, token);
         },
         
+        // ORIGINAL: Cancel
         cancel: async (requestId) => {
             const token = localStorage.getItem('token');
             // ✅ FIX: Added /api prefix
             return apiRequest(`/api/smsman/cancel/${requestId}`, 'POST', null, token);
+        },
+        
+        // ✅ NEW: Cancel Number (alias for compatibility)
+        cancelNumber: async (requestId) => {
+            return api.smsman.cancel(requestId);
+        },
+        
+        // ✅ NEW: Check SMS (alias for compatibility)
+        checkSMS: async (requestId) => {
+            return api.smsman.getSMS(requestId);
+        },
+        
+        // ✅ NEW: Get my purchases
+        getMyPurchases: async () => {
+            const token = localStorage.getItem('token');
+            return apiRequest('/api/smsman/my-purchases', 'GET', null, token);
         }
     },
     
-    // ✅ Pricing Helpers (NO CHANGES)
+    // ✅ ORIGINAL Pricing Helpers - NO CHANGES
     pricing: {
         formatPrice: (price) => `₹${Number(price).toFixed(2)}`,
         
@@ -157,7 +186,7 @@ const api = {
         }
     },
     
-    // ✅ Complete Purchase Flow (NO CHANGES - uses api.smsman internally)
+    // ✅ ORIGINAL Complete Purchase Flow - NO CHANGES
     purchase: {
         buyService: async (serviceId, countryId = 91) => {
             try {
@@ -187,7 +216,7 @@ const api = {
     }
 };
 
-// ✅ UI HELPERS (NO CHANGES)
+// ✅ ORIGINAL UI HELPERS - NO CHANGES
 async function loadServicesWithPrices() {
     try {
         const services = await api.smsman.getServices();
@@ -225,7 +254,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// Make api available globally
+// ✅ Make api available globally
 window.api = api;
 window.loadServicesWithPrices = loadServicesWithPrices;
 window.handleBuyClick = handleBuyClick;
