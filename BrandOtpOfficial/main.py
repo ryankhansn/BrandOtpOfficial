@@ -10,6 +10,10 @@ import uvicorn
 import os
 import sqlite3
 import time
+# Add this import at top
+from backend.utils.auth_utils import get_current_user as get_auth_user
+from backend.db import users_collection, payments_collection
+from bson import ObjectId
 
 # --- ✅ 1. अपने सभी राउटर्स को यहाँ इम्पोर्ट करें ---
 from backend.routes.smsman_numbers import router as smsman_router
@@ -134,15 +138,6 @@ def init_database():
     conn.close()
     print("✅ Database tables initialized")
 
-# ✅ Helper function (NO async, simplified)
-def get_current_user(request: Request):
-    """Get current user from session/token - simplified for testing"""
-    try:
-        # Simplified - just return demo user for now
-        # TODO: Implement proper token validation later
-        return {"user_id": 1, "username": "demo_user", "email": "demo@example.com"}
-    except Exception as e:
-        raise HTTPException(status_code=401, detail="Authentication required")
 
 # Exception Handlers
 @app.exception_handler(RequestValidationError)
@@ -306,21 +301,20 @@ async def update_sms_status(
 
 # ✅ WALLET API ROUTES
 @app.get("/api/wallet/balance")
-async def get_wallet_balance(request: Request):
-    """Get user wallet balance"""
+async def get_wallet_balance(current_user: dict = Depends(get_auth_user)):
+    """Get user wallet balance from MongoDB"""
     try:
-        current_user = get_current_user(request)
-        user_id = current_user["user_id"]
+        user_id = current_user.get("id")
         
-        conn = sqlite3.connect('database.db')
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
+        # Get user from MongoDB
+        user = users_collection.find_one({"_id": ObjectId(user_id)})
         
-        cursor.execute("SELECT balance FROM users WHERE id = ?", (user_id,))
-        result = cursor.fetchone()
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
         
-        balance = float(result['balance']) if result and result['balance'] else 0.0
-        conn.close()
+        balance = float(user.get("balance", 0.0))
+        
+        print(f"✅ Balance fetched for user {user_id}: ₹{balance}")
         
         return {"success": True, "balance": balance}
         
@@ -330,37 +324,25 @@ async def get_wallet_balance(request: Request):
             status_code=500,
             content={"success": False, "error": str(e), "balance": 0.0}
         )
-
 @app.get("/api/wallet/transactions")  
-async def get_wallet_transactions(request: Request):
-    """Get user wallet transactions"""
+async def get_wallet_transactions(current_user: dict = Depends(get_auth_user)):
+    """Get user wallet transactions from MongoDB"""
     try:
-        current_user = get_current_user(request)
-        user_id = current_user["user_id"]
+        user_id = current_user.get("id")
         
-        conn = sqlite3.connect('database.db')
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-        
-        cursor.execute("""
-            SELECT type, amount, reason, status, created_at
-            FROM wallet_transactions 
-            WHERE user_id = ? 
-            ORDER BY created_at DESC
-            LIMIT 50
-        """, (user_id,))
-        
-        rows = cursor.fetchall()
-        conn.close()
+        # Get transactions from MongoDB
+        transactions_cursor = payments_collection.find(
+            {"user_id": user_id}
+        ).sort("created_at", -1).limit(50)
         
         transactions = []
-        for row in rows:
+        for txn in transactions_cursor:
             transactions.append({
-                'type': row['type'],
-                'amount': float(row['amount']),
-                'reason': row['reason'],
-                'status': row['status'], 
-                'created_at': row['created_at']
+                'type': txn.get('type', 'credit'),
+                'amount': float(txn.get('amount', 0)),
+                'reason': txn.get('reason', 'Transaction'),
+                'status': txn.get('status', 'completed'),
+                'created_at': str(txn.get('created_at', ''))
             })
         
         return {"success": True, "transactions": transactions}
@@ -371,29 +353,6 @@ async def get_wallet_transactions(request: Request):
             status_code=500,
             content={"success": False, "error": str(e), "transactions": []}
         )
-
-
-
-@app.get("/api/auth/me")
-async def get_current_user_info(request: Request):
-    """Get current user info"""
-    try:
-        current_user = get_current_user(request)
-        return {
-            "success": True,
-            "user": {
-                "id": current_user["user_id"],
-                "username": current_user.get("username", "User"),
-                "email": current_user.get("email", "")
-            }
-        }
-    except Exception as e:
-        return JSONResponse(
-            status_code=401,
-            content={"success": False, "error": "Authentication required"}
-        )
-
-
 
 # ✅ ADD SMSMan routes
 app.include_router(smsman_router, prefix="/api/smsman", tags=["SMSMan API"])
@@ -609,6 +568,7 @@ if __name__ == "__main__":
         reload=False,
         log_level="info"
     )
+
 
 
 
