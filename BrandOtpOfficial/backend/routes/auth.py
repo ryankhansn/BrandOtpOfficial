@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, Depends
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, EmailStr, StringConstraints
 from typing import Annotated
@@ -6,14 +6,11 @@ import bcrypt
 from datetime import datetime, timedelta
 from bson import ObjectId
 import os
-import traceback
-import jwt  # Ye sirf PyJWT hona chahiye!
+import jwt
 
-# Ya aur safe:
-from jwt import encode, decode
-
-# Import database
+# Import database and auth utilities
 from backend.db import users_collection
+from backend.utils.auth_utils import get_current_user
 
 router = APIRouter()
 
@@ -22,9 +19,7 @@ SECRET_KEY = os.getenv("SECRET_KEY", "brandotpsecretkey2025")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 1440  # 24 hours
 
-# -------------------
-# Pydantic v2 Models
-# -------------------
+# Pydantic Models
 class UserSignup(BaseModel):
     username: Annotated[str, StringConstraints(min_length=4)]
     email: EmailStr
@@ -34,9 +29,7 @@ class UserLogin(BaseModel):
     email: EmailStr
     password: Annotated[str, StringConstraints(min_length=4)]
 
-# ---------------------
 # Password utilities
-# ---------------------
 def hash_password(password: str) -> str:
     """Hash password using bcrypt"""
     try:
@@ -52,13 +45,10 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verify password using bcrypt"""
     try:
         if not plain_password or not hashed_password:
-            print(f"❌ Empty password or hash")
             return False
-
         pwd_bytes = plain_password.encode('utf-8')
         hashed_bytes = hashed_password.encode('utf-8')
         result = bcrypt.checkpw(pwd_bytes, hashed_bytes)
-        print(f"✅ Password verification: {result}")
         return result
     except Exception as e:
         print(f"❌ Password verification error: {e}")
@@ -87,8 +77,6 @@ async def signup(user_data: UserSignup):
             raise HTTPException(status_code=400, detail="Email already registered")
         if users_collection.find_one({"username": user_data.username}):
             raise HTTPException(status_code=400, detail="Username already taken")
-
-        # No manual length check needed — model enforces min_length=4
 
         # Hash password
         hashed_password = hash_password(user_data.password)
@@ -143,14 +131,12 @@ async def login(user_credentials: UserLogin):
 
         print(f"👤 LOGIN: User found - {user.get('username', 'N/A')}")
 
-        # Check password field exists
-        if 'password' not in user or user['password'] is None or user['password'] == '':
-            print(f"❌ LOGIN: Password field missing")
-            raise HTTPException(status_code=401, detail="Account setup incomplete. Please contact support.")
+        # Check password
+        if 'password' not in user or not user['password']:
+            raise HTTPException(status_code=401, detail="Account setup incomplete")
 
         # Verify password
-        is_valid = verify_password(user_credentials.password, user['password'])
-        if not is_valid:
+        if not verify_password(user_credentials.password, user['password']):
             print(f"❌ LOGIN: Invalid password")
             raise HTTPException(status_code=401, detail="Invalid email or password")
 
@@ -158,7 +144,7 @@ async def login(user_credentials: UserLogin):
 
         # Check if active
         if not user.get("is_active", True):
-            raise HTTPException(status_code=401, detail="Account is deactivated")
+            raise HTTPException(status_code=401, detail="Account deactivated")
 
         # Create token
         user_id = str(user["_id"])
@@ -186,6 +172,21 @@ async def login(user_credentials: UserLogin):
         print(f"❌ LOGIN ERROR: {e}")
         raise HTTPException(status_code=500, detail=f"Login failed: {str(e)}")
 
+# ✅ FIXED: Real JWT-based /me endpoint
+@router.get("/me")
+async def get_current_user_info(current_user: dict = Depends(get_current_user)):
+    """Get current authenticated user info"""
+    try:
+        print(f"✅ /me endpoint: User {current_user.get('username')}")
+        
+        return {
+            "success": True,
+            "user": current_user
+        }
+    except Exception as e:
+        print(f"❌ Get user info error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to get user info")
+
 @router.get("/test")
 async def test_auth():
     """Test endpoint"""
@@ -194,48 +195,7 @@ async def test_auth():
         return {
             "message": "Auth working!",
             "status": "success",
-            "users_in_db": user_count,
-            "bcrypt_version": bcrypt.__version__ if hasattr(bcrypt, '__version__') else "unknown"
+            "users_in_db": user_count
         }
     except Exception as e:
         return {"error": str(e)}
-
-@router.get("/debug/{email}")
-async def debug_user(email: str):
-    """Debug user - Remove in production"""
-    try:
-        user = users_collection.find_one({"email": email})
-        if not user:
-            return {"message": "User not found"}
-
-        return {
-            "found": True,
-            "has_password": 'password' in user and user['password'] is not None,
-            "password_length": len(user['password']) if user.get('password') else 0,
-            "username": user.get('username'),
-            "is_active": user.get('is_active')
-        }
-    except Exception as e:
-        return {"error": str(e)}
-
-@router.get("/me")
-async def get_current_user_info():
-    """Get current user info from token - for dashboard"""
-    try:
-        # For now, return demo data since we need to implement proper auth middleware
-        # This will be replaced with real token validation later
-
-        return {
-            "success": True,
-            "user": {
-                "id": "demo123",
-                "username": "moin",  # From your login
-                "email": "moin@example.com",
-                "balance": 400.0,
-                "is_active": True
-            }
-        }
-
-    except Exception as e:
-        print(f"❌ Get user info error: {e}")
-        raise HTTPException(status_code=500, detail="Failed to get user info")
