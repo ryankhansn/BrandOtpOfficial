@@ -57,7 +57,7 @@ otp_requests_collection = db["otp_requests"]
 wallets_collection = db["wallets"]
 payments_collection = db["payments"]
 numbers_collection = db["numbers"]      # If number-related used anywhere
-
+smsman_purchases_collection = db["smsman_purchases"]
 # Helpers / quick accessor
 def get_db():
     return db
