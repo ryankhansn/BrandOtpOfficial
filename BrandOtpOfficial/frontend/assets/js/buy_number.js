@@ -229,7 +229,7 @@ function handleCountryChange(e) {
     const countryId = parseInt(e.target.value);
     
     if (countryId) {
-        loadServicesForCountry(countryId);
+        loadServicesWithPricingForCountry(countryId);  // ✅ NEW FUNCTION
     } else {
         serviceSelect.innerHTML = '<option value="">Select country first...</option>';
         allServices = [];
@@ -237,6 +237,50 @@ function handleCountryChange(e) {
         serviceSearch.disabled = true;
         serviceSearch.placeholder = 'Select country first...';
         serviceCount.textContent = '';
+    }
+}
+
+// ✅ NEW FUNCTION: Load services with country-specific pricing
+async function loadServicesWithPricingForCountry(countryId) {
+    serviceSelect.innerHTML = '<option value="">🔄 Loading services with live pricing...</option>';
+    serviceSearch.disabled = true;
+    serviceSearch.placeholder = 'Loading...';
+    serviceCount.textContent = 'Fetching live prices...';
+    
+    try {
+        const apiUrl = getApiUrl();
+        
+        // ✅ Pass country_id parameter to get country-specific pricing
+        console.log(`📡 Fetching services for country ${countryId}...`);
+        const response = await fetch(`${apiUrl}/api/smsman/services?country_id=${countryId}`);
+        const data = await response.json();
+        
+        if (data.success && data.services && data.services.length > 0) {
+            allServices = data.services;
+            filteredServices = [...allServices];
+            
+            populateServices();
+            updateServiceSearch();
+            
+            console.log(`✅ Loaded ${allServices.length} services with LIVE pricing for country ${countryId}`);
+            console.log(`💰 Sample prices:`, allServices.slice(0, 3).map(s => `${s.name}: ${s.display_price}`));
+        } else {
+            serviceSelect.innerHTML = '<option value="">❌ No services available for this country</option>';
+            allServices = [];
+            filteredServices = [];
+            serviceSearch.disabled = true;
+            serviceCount.textContent = 'No services available';
+            
+            showError(`No services available for the selected country. Please try another country.`);
+        }
+    } catch (error) {
+        console.error('❌ Error loading services:', error);
+        serviceSelect.innerHTML = '<option value="">❌ Error loading services</option>';
+        allServices = [];
+        filteredServices = [];
+        serviceSearch.disabled = true;
+        
+        showError(`Failed to load services. Please try again.`);
     }
 }
 
@@ -550,3 +594,4 @@ function showInfo(message) {
 }
 
 console.log('✅ Buy Number Script Loaded Successfully');
+
