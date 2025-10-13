@@ -1,4 +1,4 @@
-# backend/utils/smsman_client.py - COMPLETE FIXED VERSION WITH API DOCS
+# backend/utils/smsman_client.py - COMPLETE FIXED WITH DEBUG LOGS
 import httpx
 import os
 import json
@@ -91,7 +91,7 @@ async def get_services() -> List[Dict[str, Any]]:
 async def get_services_by_country(country_id: int) -> List[Dict[str, Any]]:
     """
     Fetch services with country-specific pricing
-    ✅ API DOCS FORMAT: {"country_id": {"app_id": {"cost": "15", "count": 100}}}
+    ✅ IMPROVED LIST/DICT PARSING WITH DEBUG LOGS
     """
     
     if not SMSMAN_API_KEY:
@@ -136,64 +136,147 @@ async def get_services_by_country(country_id: int) -> List[Dict[str, Any]]:
                 pricing_raw = pricing_response.json()
                 print(f"📊 Country {country_id} pricing type: {type(pricing_raw)}")
                 
+                # ✅ DEBUG: Print sample to understand format
+                if isinstance(pricing_raw, list):
+                    if len(pricing_raw) > 0:
+                        print(f"📊 Sample LIST item [0]: {str(pricing_raw[0])[:200]}")
+                        if len(pricing_raw) > 1:
+                            print(f"📊 Sample LIST item [1]: {str(pricing_raw[1])[:200]}")
+                elif isinstance(pricing_raw, dict):
+                    keys = list(pricing_raw.keys())[:3]
+                    for key in keys:
+                        print(f"📊 Sample DICT key '{key}': {str(pricing_raw[key])[:200]}")
+                
             except json.JSONDecodeError as e:
                 print(f"❌ Country {country_id} pricing JSON error: {e}")
                 return []
             
-            # Step 3: Parse pricing - API DOCS FORMAT
+            # Step 3: Parse pricing - IMPROVED LOGIC
             country_pricing = {}
             
             try:
-                if isinstance(pricing_raw, dict):
-                    print(f"🔄 Processing DICT format for country {country_id}...")
-                    
-                    # API DOCS FORMAT: {"0": {"1": {"cost": "15", "count": 100}}}
-                    # "0" = country_id, "1" = app_id
-                    
-                    for price_country_id, services_dict in pricing_raw.items():
-                        if isinstance(services_dict, dict):
-                            for service_id_str, price_data in services_dict.items():
-                                try:
-                                    service_id = int(str(service_id_str).strip())
-                                    
-                                    if isinstance(price_data, dict) and 'cost' in price_data:
-                                        original_cost = float(price_data['cost'])
-                                        
-                                        if original_cost > 0:
-                                            country_pricing[service_id] = {
-                                                'original': original_cost,
-                                                'user_price': original_cost * PROFIT_MARGIN,
-                                                'count': int(price_data.get('count', 0))
-                                            }
-                                except (ValueError, TypeError):
-                                    continue
-                
-                elif isinstance(pricing_raw, list):
+                # ✅ FORMAT 1: LIST (Most common)
+                if isinstance(pricing_raw, list):
                     print(f"🔄 Processing LIST format for country {country_id}...")
                     
-                    for item in pricing_raw:
-                        if isinstance(item, dict):
+                    for idx, item in enumerate(pricing_raw):
+                        if not isinstance(item, dict):
+                            continue
+                        
+                        try:
+                            # Try different field name combinations
+                            service_id = None
+                            cost = None
+                            count = 0
+                            
+                            # Service ID variations
+                            for field in ['application_id', 'app_id', 'id', 'service_id']:
+                                if field in item:
+                                    try:
+                                        service_id = int(str(item[field]).strip())
+                                        break
+                                    except (ValueError, TypeError):
+                                        continue
+                            
+                            # Cost variations
+                            for field in ['cost', 'price', 'amount']:
+                                if field in item:
+                                    try:
+                                        cost = float(str(item[field]).strip())
+                                        break
+                                    except (ValueError, TypeError):
+                                        continue
+                            
+                            # Count variations
+                            for field in ['count', 'quantity', 'available']:
+                                if field in item:
+                                    try:
+                                        count = int(str(item[field]).strip())
+                                        break
+                                    except (ValueError, TypeError):
+                                        continue
+                            
+                            if service_id and service_id > 0 and cost and cost > 0:
+                                country_pricing[service_id] = {
+                                    'original': cost,
+                                    'user_price': cost * PROFIT_MARGIN,
+                                    'count': count
+                                }
+                                
+                                # Debug first 5 items
+                                if idx < 5:
+                                    print(f"✅ LIST[{idx}] - Service {service_id}: ₹{cost} → ₹{cost * PROFIT_MARGIN:.2f}")
+                                
+                        except Exception as e:
+                            if idx < 5:
+                                print(f"⚠️ Parse error LIST[{idx}]: {e}")
+                            continue
+                
+                # ✅ FORMAT 2: DICT (Nested)
+                elif isinstance(pricing_raw, dict):
+                    print(f"🔄 Processing DICT format for country {country_id}...")
+                    
+                    parsed_count = 0
+                    
+                    # Try multiple nesting levels
+                    for key1, value1 in pricing_raw.items():
+                        if not isinstance(value1, dict):
+                            continue
+                        
+                        # Level 1: Direct service IDs {"123": {"cost": "15"}}
+                        if 'cost' in value1 or 'price' in value1:
                             try:
-                                service_id = int(item.get('application_id', 0))
-                                cost = float(item.get('cost', 0))
-                                count = int(item.get('count', 0))
+                                service_id = int(str(key1).strip())
+                                cost = float(value1.get('cost', value1.get('price', 0)))
                                 
                                 if service_id > 0 and cost > 0:
                                     country_pricing[service_id] = {
                                         'original': cost,
                                         'user_price': cost * PROFIT_MARGIN,
-                                        'count': count
+                                        'count': int(value1.get('count', 0))
                                     }
-                            except (ValueError, TypeError, KeyError):
-                                continue
+                                    
+                                    if parsed_count < 5:
+                                        print(f"✅ DICT Level1 - Service {service_id}: ₹{cost} → ₹{cost * PROFIT_MARGIN:.2f}")
+                                    parsed_count += 1
+                            except (ValueError, TypeError):
+                                pass
+                        
+                        # Level 2: Nested service IDs {"0": {"123": {"cost": "15"}}}
+                        else:
+                            for key2, value2 in value1.items():
+                                if not isinstance(value2, dict):
+                                    continue
+                                
+                                try:
+                                    service_id = int(str(key2).strip())
+                                    cost = float(value2.get('cost', value2.get('price', 0)))
+                                    
+                                    if service_id > 0 and cost > 0:
+                                        country_pricing[service_id] = {
+                                            'original': cost,
+                                            'user_price': cost * PROFIT_MARGIN,
+                                            'count': int(value2.get('count', 0))
+                                        }
+                                        
+                                        if parsed_count < 5:
+                                            print(f"✅ DICT Level2 - Service {service_id}: ₹{cost} → ₹{cost * PROFIT_MARGIN:.2f}")
+                                        parsed_count += 1
+                                except (ValueError, TypeError):
+                                    continue
                 
                 print(f"✅ Country {country_id}: Parsed pricing for {len(country_pricing)} services")
                 
                 # ✅ CACHE THE PRICING
-                _country_pricing_cache[country_id] = country_pricing
+                if country_pricing:
+                    _country_pricing_cache[country_id] = country_pricing
+                else:
+                    print(f"⚠️ No services parsed! Check debug logs above for format issues.")
                 
             except Exception as e:
                 print(f"❌ Country {country_id} pricing parsing error: {e}")
+                import traceback
+                traceback.print_exc()
                 return []
             
             # If no pricing, return empty
@@ -253,6 +336,8 @@ async def get_services_by_country(country_id: int) -> List[Dict[str, Any]]:
                     
     except Exception as e:
         print(f"❌ Country {country_id} services error: {e}")
+        import traceback
+        traceback.print_exc()
     
     return []
 
@@ -416,7 +501,7 @@ def generate_country_code(country_name: str) -> str:
         "russia": "RU", "india": "IN", "ukraine": "UA", "china": "CN",
         "kazakhstan": "KZ", "usa": "US", "uk": "GB", "germany": "DE",
         "france": "FR", "italy": "IT", "japan": "JP", "brazil": "BR",
-        "costa rica": "CR", "kenya": "KE", "indonesia": "ID"
+        "costa rica": "CR", "kenya": "KE", "indonesia": "ID", "congo": "CO"
     }
     
     if name in mappings:
