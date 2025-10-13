@@ -1,9 +1,9 @@
-// frontend/assets/js/buy_number.js - COMPLETE WITH ALL 5 FIXES
+// frontend/assets/js/buy_number.js - FIXED VERSION
 console.log('🚀 Buy Number Script Loading...');
 
-// API Configuration
-const API_BASE_URL = window.API_BASE_URL || 'https://brandotpofficial.onrender.com';
-console.log('🔗 Using API:', API_BASE_URL);
+// ✅ DON'T redeclare API_BASE_URL - use from api.js
+// API_BASE_URL is already loaded from api.js
+console.log('🔗 Using API:', typeof API_BASE_URL !== 'undefined' ? API_BASE_URL : 'Not loaded');
 
 // Global data storage
 let countries = [];
@@ -21,6 +21,11 @@ let numberSection, phoneNumber, requestId, numberStatus;
 let timerBadge, countdown, cancelBtn, refundInfo, refundMessage;
 let balanceBadge, userBalance;
 let smsSection, smsFrom, smsMessage, smsCode;
+
+// Get API URL safely
+function getApiUrl() {
+    return typeof API_BASE_URL !== 'undefined' ? API_BASE_URL : 'https://brandotpofficial.onrender.com';
+}
 
 // ✅ Initialize on DOM load
 document.addEventListener('DOMContentLoaded', function() {
@@ -121,13 +126,13 @@ async function loadUserBalance() {
         console.log('✅ Balance loaded:', balance);
     } catch (error) {
         console.log('⚠️ Balance load failed (user may not be logged in):', error.message);
-        // Don't show error - maybe user not logged in
     }
 }
 
 async function loadCountries() {
     try {
-        const response = await fetch(`${API_BASE_URL}/api/smsman/countries`);
+        const apiUrl = getApiUrl();
+        const response = await fetch(`${apiUrl}/api/smsman/countries`);
         const data = await response.json();
         
         if (data.success && data.countries) {
@@ -151,7 +156,8 @@ async function loadServicesForCountry(countryId) {
     serviceCount.textContent = '';
     
     try {
-        const response = await fetch(`${API_BASE_URL}/api/smsman/services`);
+        const apiUrl = getApiUrl();
+        const response = await fetch(`${apiUrl}/api/smsman/services`);
         const data = await response.json();
         
         if (data.success && data.services && data.services.length > 0) {
@@ -290,7 +296,6 @@ async function handleBuyNumber(e) {
     buyBtn.textContent = '🔄 Purchasing...';
     result.innerHTML = '';
     
-    // Hide previous results
     numberSection.style.display = 'none';
     smsSection.style.display = 'none';
     
@@ -300,7 +305,8 @@ async function handleBuyNumber(e) {
             throw new Error('Please login first');
         }
         
-        const response = await fetch(`${API_BASE_URL}/api/smsman/buy`, {
+        const apiUrl = getApiUrl();
+        const response = await fetch(`${apiUrl}/api/smsman/buy`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -319,7 +325,6 @@ async function handleBuyNumber(e) {
         }
         
         if (data.success && data.number && data.request_id) {
-            // Store purchase info
             currentPurchase = {
                 number: data.number,
                 request_id: data.request_id,
@@ -333,18 +338,13 @@ async function handleBuyNumber(e) {
             
             console.log('✅ Purchase successful:', currentPurchase);
             
-            // Display the number (FIX 1)
             displayPurchasedNumber(data);
             
-            // Update balance (FIX 3)
             if (data.new_balance !== undefined) {
                 userBalance.textContent = `₹${data.new_balance.toFixed(2)}`;
             }
             
-            // Start auto SMS checking (FIX 5)
             startSMSChecking();
-            
-            // Show refund info (FIX 4)
             showRefundInfo();
             
         } else {
@@ -360,7 +360,6 @@ async function handleBuyNumber(e) {
     }
 }
 
-// ✅ FIX 1: Display number with country code
 function displayPurchasedNumber(data) {
     phoneNumber.textContent = data.display_number || data.number;
     requestId.textContent = data.request_id;
@@ -374,31 +373,21 @@ function displayPurchasedNumber(data) {
 
 // ===== SMS CHECKING FUNCTIONS =====
 
-// ✅ FIX 5: Start SMS checking with timer
 function startSMSChecking() {
-    // Show timer
     timerBadge.style.display = 'inline-block';
-    
-    // Check immediately
     checkForSMS();
-    
-    // Then check every 5 seconds
     smsCheckInterval = setInterval(checkForSMS, 5000);
-    
-    // Start countdown timer
     startCountdown();
     
-    // Stop after 5 minutes
     setTimeout(() => {
         stopSMSChecking();
         numberStatus.textContent = '⏱️ SMS Timeout';
         numberStatus.className = 'status-badge';
         numberStatus.style.background = '#f8d7da';
         numberStatus.style.color = '#721c24';
-    }, 300000); // 5 minutes
+    }, 300000);
 }
 
-// ✅ FIX 5: Countdown timer
 function startCountdown() {
     secondsLeft = 5;
     countdown.textContent = secondsLeft;
@@ -429,7 +418,8 @@ async function checkForSMS() {
     
     try {
         const token = localStorage.getItem('token');
-        const response = await fetch(`${API_BASE_URL}/api/smsman/sms/${currentPurchase.request_id}`, {
+        const apiUrl = getApiUrl();
+        const response = await fetch(`${apiUrl}/api/smsman/sms/${currentPurchase.request_id}`, {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${token}`
@@ -439,7 +429,6 @@ async function checkForSMS() {
         const data = await response.json();
         
         if (data.success && data.sms_received && data.sms_code) {
-            // SMS received!
             displaySMS({
                 code: data.sms_code,
                 message: data.sms_text || `Your verification code: ${data.sms_code}`,
@@ -447,11 +436,8 @@ async function checkForSMS() {
             });
             
             stopSMSChecking();
-            
             numberStatus.textContent = '✅ SMS Received';
             numberStatus.className = 'status-badge status-completed';
-            
-            // ✅ FIX 4: Disable cancel after SMS
             disableCancelButton();
             
         } else if (data.status === 'waiting') {
@@ -463,7 +449,6 @@ async function checkForSMS() {
     }
 }
 
-// Manual SMS check (called from HTML button)
 window.manualCheckSMS = async function() {
     console.log('🔄 Manual SMS check triggered');
     await checkForSMS();
@@ -473,15 +458,12 @@ function displaySMS(smsData) {
     smsFrom.textContent = smsData.from;
     smsMessage.textContent = smsData.message;
     smsCode.textContent = smsData.code;
-    
     smsSection.style.display = 'block';
-    
     showSuccess('🎉 SMS received! Your verification code is ready.');
 }
 
 // ===== CANCEL FUNCTION =====
 
-// ✅ FIX 2 & FIX 4: Cancel number with refund (called from HTML button)
 window.cancelNumber = async function() {
     if (!currentPurchase) {
         showError('No active purchase to cancel');
@@ -497,7 +479,8 @@ window.cancelNumber = async function() {
     
     try {
         const token = localStorage.getItem('token');
-        const response = await fetch(`${API_BASE_URL}/api/smsman/cancel/${currentPurchase.request_id}`, {
+        const apiUrl = getApiUrl();
+        const response = await fetch(`${apiUrl}/api/smsman/cancel/${currentPurchase.request_id}`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`
@@ -512,17 +495,14 @@ window.cancelNumber = async function() {
         
         if (data.success) {
             stopSMSChecking();
-            
             numberStatus.textContent = '❌ Cancelled';
             numberStatus.className = 'status-badge status-cancelled';
             
-            // Update balance (FIX 3)
             if (data.new_balance !== undefined) {
                 userBalance.textContent = `₹${data.new_balance.toFixed(2)}`;
             }
             
             showSuccess(`✅ ${data.message || 'Cancelled successfully!'} Refunded: ₹${data.refund_amount || 'N/A'}`);
-            
             disableCancelButton();
             
         } else {
@@ -537,13 +517,11 @@ window.cancelNumber = async function() {
     }
 };
 
-// ✅ FIX 4: Show refund info
 function showRefundInfo() {
     refundInfo.style.display = 'block';
     refundMessage.textContent = '⚠️ You can cancel and get full refund if SMS not received yet.';
 }
 
-// ✅ FIX 4: Disable cancel button after SMS
 function disableCancelButton() {
     cancelBtn.disabled = true;
     cancelBtn.textContent = '❌ Cannot Cancel';
@@ -571,4 +549,4 @@ function showInfo(message) {
     result.innerHTML = `<div class="info">ℹ️ ${message}</div>`;
 }
 
-console.log('✅ Buy Number Script Loaded');
+console.log('✅ Buy Number Script Loaded Successfully');
