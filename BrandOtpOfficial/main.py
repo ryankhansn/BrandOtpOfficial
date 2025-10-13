@@ -4,28 +4,26 @@ from fastapi.responses import FileResponse, JSONResponse, HTMLResponse
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi.staticfiles import StaticFiles
-from contextlib import suppress  # ✅ ADD THIS LINE
-import asyncio  # ✅ ADD THIS LINE
+from contextlib import suppress
+import asyncio
 import uvicorn
 import os
 import sqlite3
 import time
-# Add this import at top
 from backend.utils.auth_utils import get_current_user as get_auth_user
 from backend.db import users_collection, payments_collection
 from bson import ObjectId
 
-# --- ✅ 1. अपने सभी राउटर्स को यहाँ इम्पोर्ट करें ---
+# Import routers
 from backend.routes.smsman_numbers import router as smsman_router
 from backend.routes.pay0_order import router as pay0_router
 from backend.routes.payment_status import router as payment_status_router
-from backend.routes.webhook import router as webhook_router # वेबहुक राउटर (बैकअप के लिए)
+from backend.routes.webhook import router as webhook_router
 from backend.routes.auth import router as auth_router
-# (आपके बाकी के इम्पोर्ट्स)
+
 import hashlib
 import secrets
 
-# (आपके सभी फंक्शन्स)
 def get_password_hash(password: str) -> str:
     return hashlib.sha256(password.encode()).hexdigest()
 
@@ -44,14 +42,15 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
-# CORS Middleware
+# ✅ FIXED CORS - Added wildcard for Netlify
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "https://brandotpofficial.shop",
         "https://www.brandotpofficial.shop",
         "https://brandotpofficial.netlify.app",
-        "https://brandotp.netlify.app",
+        "https://brandotp.netlify.app",  # ✅ Your frontend
+        "https://*.netlify.app",  # ✅ Wildcard for all Netlify previews
         "http://localhost:8000",
         "http://127.0.0.1:5500",
         "http://localhost:5500",
@@ -59,34 +58,15 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"]  # ✅ Added
 )
 
-# --- ✅ 2. अपने सभी राउटर्स को यहाँ सही तरीके से जोड़ें ---
+# ✅ Register routers FIRST (Before any @app routes)
+app.include_router(auth_router, prefix="/api/auth", tags=["Auth"])
+app.include_router(smsman_router, prefix="/api/smsman", tags=["SMSMan API"])
 app.include_router(pay0_router, prefix="/api/payments", tags=["Payments"])
 app.include_router(payment_status_router, prefix="/api/payments", tags=["Payments"])
-app.include_router(webhook_router, prefix="/api/payments", tags=["Payments"]) # वेबहुक जोड़ा गया
-app.include_router(smsman_router, prefix="/api/smsman", tags=["SMSMan API"])
-app.include_router(auth_router, prefix="/api/auth", tags=["Auth"])
-# ---------------------------------------------------
-
-# (यहाँ से आपका बाकी का main.py कोड शुरू होता है, जिसमें कोई बदलाव नहीं है)
-# ... init_database() ...
-# ... get_current_user() ...
-# ... Exception Handlers ...
-# ... /api/history/numbers ...
-# ... @app.post("/api/buy-number") ...
-# ... @app.post("/api/update-sms-status") ...
-# ... @app.get("/api/wallet/balance") ...
-# ... @app.get("/api/wallet/transactions") ...
-# ... @app.get("/api/auth/me") ...
-
-# --- ❌ ध्यान दें: पुराना @app.post("/api/wallet/add-money") वाला फंक्शन और register_all_routers(app) यहाँ से हटा दिए गए हैं ---
-
-# ... (StaticFiles Mount और बाकी के Page Routes) ...
-# ... (Health Check और Startup/Shutdown Events) ...
-# ... (if __name__ == "__main__":) ...
-
-
+app.include_router(webhook_router, prefix="/api/payments", tags=["Payments"])
 
 # Database initialization
 def init_database():
@@ -138,7 +118,6 @@ def init_database():
     conn.close()
     print("✅ Database tables initialized")
 
-
 # Exception Handlers
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
@@ -165,15 +144,18 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException):
 @app.exception_handler(Exception)
 async def general_exception_handler(request: Request, exc: Exception):
     print(f"❌ Unexpected error: {str(exc)}")
+    import traceback
+    traceback.print_exc()
     return JSONResponse(
         status_code=500,
         content={
             "success": False,
-            "detail": "Internal server error. Please try again later."
+            "detail": "Internal server error. Please try again later.",
+            "error": str(exc)
         }
     )
 
-# ✅ HISTORY API ROUTES
+# HISTORY API ROUTES
 @app.get("/api/history/numbers")
 async def get_number_history(request: Request):
     """Get user's number purchase history"""
@@ -299,14 +281,13 @@ async def update_sms_status(
             content={"success": False, "error": "Failed to update status"}
         )
 
-# ✅ WALLET API ROUTES
+# WALLET API ROUTES
 @app.get("/api/wallet/balance")
 async def get_wallet_balance(current_user: dict = Depends(get_auth_user)):
     """Get user wallet balance from MongoDB"""
     try:
         user_id = current_user.get("id")
         
-        # Get user from MongoDB
         user = users_collection.find_one({"_id": ObjectId(user_id)})
         
         if not user:
@@ -324,13 +305,13 @@ async def get_wallet_balance(current_user: dict = Depends(get_auth_user)):
             status_code=500,
             content={"success": False, "error": str(e), "balance": 0.0}
         )
+
 @app.get("/api/wallet/transactions")  
 async def get_wallet_transactions(current_user: dict = Depends(get_auth_user)):
     """Get user wallet transactions from MongoDB"""
     try:
         user_id = current_user.get("id")
         
-        # Get transactions from MongoDB
         transactions_cursor = payments_collection.find(
             {"user_id": user_id}
         ).sort("created_at", -1).limit(50)
@@ -354,9 +335,6 @@ async def get_wallet_transactions(current_user: dict = Depends(get_auth_user)):
             content={"success": False, "error": str(e), "transactions": []}
         )
 
-# ✅ ADD SMSMan routes
-app.include_router(smsman_router, prefix="/api/smsman", tags=["SMSMan API"])
-
 # Frontend Configuration
 frontend_dir = "frontend"
 assets_dir = os.path.join(frontend_dir, "assets")
@@ -366,7 +344,6 @@ if os.path.exists(assets_dir):
 else:
     print(f"⚠️ Assets directory not found at: {assets_dir}")
 
-# Helper for HTML file serving
 def serve_html_file(page: str, fallback_html: str):
     page_path = os.path.join(frontend_dir, f"{page}.html")
     if os.path.exists(page_path):
@@ -431,7 +408,6 @@ async def serve_buy_number():
 
 @app.get("/history", response_class=HTMLResponse)
 async def serve_history():
-    """Serve history page"""
     return serve_html_file("history", """
     <!DOCTYPE html>
     <html>
@@ -482,7 +458,7 @@ async def serve_history():
     </html>
     """)
 
-# ✅ API Health Check
+# API Health Check
 @app.get("/health")
 async def health_check():
     return {
@@ -492,7 +468,7 @@ async def health_check():
         "features": ["Authentication", "Wallet", "SMSMan Integration", "History Tracking"]
     }
 
-# ✅ API Root Check  
+# API Root Check  
 @app.get("/api")
 async def api_root():
     return {
@@ -501,6 +477,7 @@ async def api_root():
         "endpoints": {
             "smsman_services": "/api/smsman/services",
             "smsman_countries": "/api/smsman/countries", 
+            "smsman_buy": "/api/smsman/buy",
             "smsman_meta": "/api/smsman/meta",
             "history_numbers": "/api/history/numbers",
             "buy_number": "/api/buy-number",
@@ -514,6 +491,7 @@ async def startup_event():
     print("🚀 BrandOtp API Starting...")
     init_database()
     print(f"📁 Frontend directory: {os.path.abspath(frontend_dir)}")
+    print("✅ CORS enabled for Netlify deployments")
     print("🏠 Home: http://localhost:8000/")
     print("🔐 Login: http://localhost:8000/login")
     print("📝 Signup: http://localhost:8000/signup")
@@ -563,21 +541,8 @@ if __name__ == "__main__":
     print("📊 History API: http://localhost:8000/api/history/numbers")
     uvicorn.run(
         "main:app",
-        host="127.0.0.1",
+        host="0.0.0.0",  # ✅ Changed from 127.0.0.1 to 0.0.0.0 for Render
         port=8000,
         reload=False,
         log_level="info"
     )
-
-
-
-
-
-
-
-
-
-
-
-
-
